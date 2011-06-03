@@ -16,7 +16,7 @@ int SA_init(void)
      return 0; // FIXME
 }
 
-SAContext *SA_open(char *filename) // FIXME: update for calculating PTS/DTS.
+SAContext *SA_open(char *filename)
 {
      int v_stream = -1, a_stream = -1, i;
      AVFormatContext *avfmt_ctx_ptr = NULL;
@@ -82,7 +82,7 @@ SAContext *SA_open(char *filename) // FIXME: update for calculating PTS/DTS.
      ctx_p->a_codec_ctx->request_channels = FFMIN(2, ctx_p->a_codec_ctx->channels);
 
      if(avcodec_open(v_codec_ctx, v_codec) < 0 ||
-        avcodec_open(a_codec_ctx, a_codec) < 0) // FIXME: audio codec < 0?
+        avcodec_open(a_codec_ctx, a_codec) < 0)
           goto OPEN_FAIL;
 
      /* set our userdata for calculating PTS */
@@ -207,7 +207,7 @@ int _SA_decode_packet(SAContext *sa_ctx)
                if(ret == NULL)
                {
                     printf("malloc failed\n");
-                    goto DECODE_FAILED; // FIXME
+                    goto DECODE_FAILED; // FIXME: decoding error report
                }
                sa_vp_ret->frame_ptr = v_frame;
 
@@ -268,7 +268,7 @@ int _SA_decode_packet(SAContext *sa_ctx)
                     av_free(sa_ap_ret->abuffer);
                     free(ret); // FIXME: handle data_size <= 0 in a different way?
                     printf("error on decoding\n");
-                    goto DECODE_FAILED; // FIXME
+                    goto DECODE_FAILED; // FIXME: decoding error report
                }
 
                pkt_t.data += decoded_size;

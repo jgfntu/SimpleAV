@@ -79,7 +79,7 @@ void audio_callback(void *data, uint8_t *stream, int len)
           stream += size_to_copy;
           audio_buf_index += size_to_copy;
 
-          if(audio_buf_index >= sa_ap->len) // FIXME: ">="?
+          if(audio_buf_index >= sa_ap->len)
           {
                free(sa_ap);
                sa_ap = NULL;

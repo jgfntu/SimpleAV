@@ -24,7 +24,6 @@ typedef struct SAAudioPacket {
 typedef struct SAContext {
      char *filename;
      SAQContext *vq_ctx, *aq_ctx;
-     // SDL_mutex *vq_lock, *aq_lock; // FIXME: lock the decode function only?
      SDL_mutex *decode_lock; // FIXME: remove SA's dependency of SDL.
      AVFormatContext *avfmt_ctx_ptr;
      AVCodecContext *a_codec_ctx, *v_codec_ctx;
