@@ -10,9 +10,6 @@
 #define  TRUE     1
 #define  FALSE    0
 
-// FIXME: does this really not work?
-// #define  ECHO_AND_GOTO(a,b)   {fprintf(stderr, a); goto b;}
-
 int SA_init(void)
 {
      av_register_all();
@@ -89,6 +86,8 @@ SAContext *SA_open(char *filename) // FIXME: update for calculating PTS/DTS.
           goto OPEN_FAIL;
 
      /* set our userdata for calculating PTS */
+     v_codec_ctx->get_buffer = _SA_get_buffer;
+     v_codec_ctx->release_buffer = _SA_release_buffer;
      v_codec_ctx->opaque = (uint64_t *)malloc(sizeof(uint64_t));
      if(v_codec_ctx->opaque == NULL)
      {
@@ -296,7 +295,7 @@ DECODE_FAILED:
      return -1;
 }
 
-int our_get_buffer(struct AVCodecContext *c, AVFrame *pic)
+int _SA_get_buffer(struct AVCodecContext *c, AVFrame *pic)
 {
      int ret = avcodec_default_get_buffer(c, pic);
      uint64_t *pts = av_malloc(sizeof(uint64_t));
@@ -305,7 +304,7 @@ int our_get_buffer(struct AVCodecContext *c, AVFrame *pic)
      return ret;
 }
 
-void our_release_buffer(struct AVCodecContext *c, AVFrame *pic)
+void _SA_release_buffer(struct AVCodecContext *c, AVFrame *pic)
 {
      if(pic)
           av_freep(&pic->opaque);
