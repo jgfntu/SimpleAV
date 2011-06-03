@@ -4,4 +4,4 @@ Current version is 0.0.3, based on libav v0.6.2.
 Still does not support seeking yet; and you need to do the syncing job yourself.
 
 Sample code is written in "test.c". You could compile it with "make".
-Don't forget to install libav v0.6.9 first.
+Don't forget to install libav v0.6.2 first.
