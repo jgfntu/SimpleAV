@@ -1,4 +1,6 @@
 *.o
 *~
+*.mkv
+*.mp4
 test
 debug
