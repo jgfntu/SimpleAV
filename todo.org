@@ -19,6 +19,7 @@
 
 
 * to make it perfect
+** TODO modify _SA_decode_packet to make it neater.                  :SA_api:
 ** TODO add precise EOF detect/decodeing error report                :test.c:SA_api:
 ** TODO make SDL_PollEvent block? No 'SDL_Delay(10)' any more!       :test.c:
 ** TODO improve SA_init, make its return value meaningful.           :SA_api:
