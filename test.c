@@ -77,6 +77,7 @@ void audio_callback(void *data, uint8_t *stream, int len)
 
           if(audio_buf_index >= sa_ap->len)
           {
+               av_free(sa_ap->abuffer);
                free(sa_ap);
                sa_ap = NULL;
                audio_buf_index = 0;
