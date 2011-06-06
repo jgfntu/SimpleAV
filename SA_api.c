@@ -45,7 +45,9 @@ SAContext *SA_open(char *filename)
      ctx_p->avfmt_ctx_ptr = avfmt_ctx_ptr;
      if(av_find_stream_info(avfmt_ctx_ptr) < 0)
           goto OPEN_FAIL;
-     dump_format(avfmt_ctx_ptr, 0, filename, 0);
+
+     /* FIXME: debug */
+     // dump_format(avfmt_ctx_ptr, 0, filename, 0);
 
      /* getting the video stream */
      for(i = 0; i < avfmt_ctx_ptr->nb_streams; i++)
@@ -62,6 +64,12 @@ SAContext *SA_open(char *filename)
      if(i == avfmt_ctx_ptr->nb_streams)
           goto OPEN_FAIL;
      ctx_p->a_stream = a_stream = i;
+
+     // FIXME: setting discard
+     for(i = 0; i < avfmt_ctx_ptr->nb_streams; i++)
+          avfmt_ctx_ptr->streams[i]->discard = AVDISCARD_ALL;
+     avfmt_ctx_ptr->streams[a_stream]->discard = AVDISCARD_DEFAULT;
+     avfmt_ctx_ptr->streams[v_stream]->discard = AVDISCARD_DEFAULT;
 
      /* getting the codec */
      ctx_p->v_codec_ctx = v_codec_ctx = avfmt_ctx_ptr->streams[v_stream]->codec;
@@ -175,6 +183,52 @@ SAAudioPacket *SA_get_ap(SAContext *sa_ctx)
      return ret;
 }
 
+void SA_seek(SAContext *sa_ctx, double seek_to, double delta)
+{
+     SDL_mutexP(sa_ctx->decode_lock);
+     
+     /* avformat_seek_file(); */
+     /*
+     int64_t pos = seek_to * AV_TIME_BASE; // is->seek_pos
+     int64_t incr = delta * AV_TIME_BASE; // is->seek_rel
+     int seek_flags = 0; // FIXME: seek_flags? 0?
+     int64_t seek_min = incr > 0 ? pos - incr + 2 : INT64_MIN;
+     int64_t seek_max = incr < 0 ? pos - incr - 2 : INT64_MAX; // FIXME: "+- 2"?
+     if(avformat_seek_file(sa_ctx->avfmt_ctx_ptr, -1, seek_min, pos, seek_max, seek_flags) < 0)
+          fprintf(stderr, "Error while seeking!\n"); // FIXME
+     */
+     
+     /* av_seek_frame(); */
+     int64_t pos = seek_to * AV_TIME_BASE;
+     int seek_flags = delta < 0 ? AVSEEK_FLAG_BACKWARD : 0;
+     int stream_index = sa_ctx->v_stream;
+     int64_t seek_target = av_rescale_q(pos, AV_TIME_BASE_Q,
+                                        sa_ctx->video_st->time_base);
+     if(av_seek_frame(sa_ctx->avfmt_ctx_ptr, stream_index, seek_target, seek_flags) < 0)
+          fprintf(stderr, "Error while seeking!\n"); // FIXME
+     else
+     {
+          void *ptr;
+          while((ptr = SAQ_pop(sa_ctx->vq_ctx)) != NULL)
+          {
+               av_free(((SAVideoPacket *)ptr)->frame_ptr);
+               free(ptr);
+          }
+          while((ptr = SAQ_pop(sa_ctx->aq_ctx)) != NULL)
+          {
+               av_free(((SAAudioPacket *)ptr)->abuffer);
+               free(ptr);
+          }
+
+          avcodec_flush_buffers(sa_ctx->a_codec_ctx);
+          avcodec_flush_buffers(sa_ctx->v_codec_ctx);
+     }
+
+     sa_ctx->video_clock = seek_to;
+     
+     SDL_mutexV(sa_ctx->decode_lock);
+}
+
 int _SA_decode_packet(SAContext *sa_ctx)
 {
      /* use mutex to lock this func. */
@@ -186,6 +240,9 @@ int _SA_decode_packet(SAContext *sa_ctx)
      AVPacket packet;
      if(av_read_frame(sa_ctx->avfmt_ctx_ptr, &packet) < 0)
      {
+          // DEBUG
+          // printf("failed to get a new packet!\n");
+          
           SDL_mutexV(sa_ctx->decode_lock);
           return -1;
      }
@@ -223,7 +280,11 @@ int _SA_decode_packet(SAContext *sa_ctx)
                if(t_pts != 0)
                     sa_vp_ret->pts = t_pts * av_q2d(sa_ctx->video_st->time_base);
                else
+               {
                     sa_vp_ret->pts = sa_ctx->video_clock;
+                    // DEBUG
+                    // printf("cal by hand\n");
+               }
                
                double frame_delay = av_q2d(sa_ctx->video_st->codec->time_base);
                frame_delay += v_frame->repeat_pict * (frame_delay * 0.5);
@@ -289,7 +350,6 @@ int _SA_decode_packet(SAContext *sa_ctx)
 DECODE_FAILED:
      
      av_free_packet(&packet);
-     
      SDL_mutexV(sa_ctx->decode_lock);
      
      return -1;

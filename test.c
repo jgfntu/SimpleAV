@@ -4,14 +4,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// FIXME: unportable?
+#include <unistd.h>
+
 #define SDL_AUDIO_BUFFER_SIZE 512
 
+// DEBUG
+//#define SAVE_FRAME(vp) {sprintf(p_filename,"dbg/PTS%f.bmp",vp->pts);SDL_SaveBMP(screen,p_filename);}
+// char p_filename[512];
+
 SAContext *sa_ctx = NULL;
+struct SwsContext *img_convert_ctx;
 
 void show_frame(AVFrame *frame, SDL_Overlay *overlay)
 {
+     // "Show" frame
      int w = sa_ctx->v_width, h = sa_ctx->v_height;
-     
      SDL_LockYUVOverlay(overlay);
      
      AVPicture pict;
@@ -23,16 +31,6 @@ void show_frame(AVFrame *frame, SDL_Overlay *overlay)
      pict.linesize[1] = overlay->pitches[2];
      pict.linesize[2] = overlay->pitches[1];
 
-     struct SwsContext *img_convert_ctx;
-     img_convert_ctx = sws_getContext(w, h, sa_ctx->v_codec_ctx->pix_fmt,
-                                      w, h, PIX_FMT_YUV420P, SWS_BICUBIC,
-                                      NULL, NULL, NULL);
-     if(img_convert_ctx == NULL)
-     {
-          printf("Failed to get struct Swscontext!\n");
-          SDL_UnlockYUVOverlay(overlay);
-          return;
-     }
      sws_scale(img_convert_ctx, (const uint8_t *const *)(frame->data),
                frame->linesize, 0, h, pict.data, pict.linesize);
 	
@@ -48,8 +46,6 @@ void show_frame(AVFrame *frame, SDL_Overlay *overlay)
 
 void audio_callback(void *data, uint8_t *stream, int len)
 {
-     int i;
-     
      static SAAudioPacket *sa_ap = NULL;
      static unsigned int audio_buf_index = 0;
      unsigned int size_to_copy = 0;
@@ -65,8 +61,8 @@ void audio_callback(void *data, uint8_t *stream, int len)
           if(sa_ap == NULL) // cannot get SAAudioPacket: maybe EOF encountered.
           {
                sa_ctx->audio_eof = 1;
-               for(i = 0; i < len; i++) // FIXME: faster way? using memset?
-                    stream[i] = 0;
+               memset(stream, 0, len);
+               
                SDL_PauseAudio(1);
                return; // FIXME: *MAYBE* eof encountered. what if... ?
           }
@@ -88,9 +84,16 @@ void audio_callback(void *data, uint8_t *stream, int len)
      }
 }
 
+double get_clock(void)
+{
+     return av_gettime() / 1000000.0f;
+}
+
 int main(int argc, char *argv[])
 {
-     SAVideoPacket *vp = NULL;
+     // DEBUG
+     // freopen("log.txt", "w", stdout);
+     
      if(argc != 2)
      {
           printf("Usage:\ntest <filename>\n");
@@ -106,10 +109,20 @@ int main(int argc, char *argv[])
           printf("failed opening %s...\n", argv[1]);
           return 0;
      }
-     
+
      SDL_Surface *screen = SDL_SetVideoMode(sa_ctx->v_width, sa_ctx->v_height, 32, 0);
      SDL_Overlay *overlay = SDL_CreateYUVOverlay(sa_ctx->v_width, sa_ctx->v_height,
                                                  SDL_YV12_OVERLAY, screen);
+
+     int w = sa_ctx->v_width, h = sa_ctx->v_height;
+     img_convert_ctx = sws_getContext(w, h, sa_ctx->v_codec_ctx->pix_fmt,
+                                      w, h, PIX_FMT_YUV420P, SWS_BICUBIC,
+                                      NULL, NULL, NULL);
+     if(img_convert_ctx == NULL)
+     {
+          printf("Failed to get struct Swscontext!\n");
+          goto PROGRAM_QUIT;
+     }
 
      SDL_AudioSpec wanted_spec, spec;
      wanted_spec.freq = sa_ctx->a_codec_ctx->sample_rate;
@@ -127,56 +140,126 @@ int main(int argc, char *argv[])
      }
 
      SDL_PauseAudio(0);
-     Uint32 start_time = SDL_GetTicks();
-
-     vp = SA_get_vp(sa_ctx);
-     if(vp == NULL)
-     {
-          printf("Failed to get the first video frame!\n");
-          goto PROGRAM_QUIT;
-     }
+     double start_time = get_clock();
 
      SDL_Event event;
+     double w_clock;
+     SAVideoPacket *vp = NULL;
      while(!sa_ctx->video_eof)
      {
-          show_frame(vp->frame_ptr, overlay);
-
-          while(vp->pts < (SDL_GetTicks() - start_time) / 1000.0f)
+          while(vp == NULL || vp->pts < get_clock() - start_time)
           {
-               av_free(vp->frame_ptr);
-               free(vp);
-
+               if(vp != NULL)
+               {
+                    av_free(vp->frame_ptr);
+                    free(vp);
+               }
                vp = SA_get_vp(sa_ctx);
                if(vp == NULL)
-                    break;
+                    goto EXIT_LOOP; // FIXME: EOF encountered?
           }
-          SDL_PollEvent(&event);
-          if(event.type == SDL_QUIT)
+
+          w_clock = vp->pts - (get_clock() - start_time);
+          while (w_clock >= 0.0)
           {
-               sa_ctx->audio_eof = 1;
-               break;
+               usleep(w_clock * 1000 + 1);
+               w_clock = vp->pts - (get_clock() - start_time);
           }
+          /*
+          if(w_clock >= 0)
+               usleep(w_clock * 1000 + 10); // SDL_Delay(w_clock * 1000 + 15);
+          */
+
+          //printf("%f\n", vp->pts - (get_clock() - start_time));
+
+          show_frame(vp->frame_ptr, overlay);
+          //SAVE_FRAME(vp);
+
+          // printf("entering the event loop:\n");
+          while(SDL_PollEvent(&event))
+               if(event.type == SDL_QUIT)
+               {
+                    sa_ctx->video_eof = sa_ctx->audio_eof = 1;
+                    SDL_PauseAudio(1);
+                    break;
+               } else if(event.type == SDL_KEYDOWN)
+               {
+                    double delta;
+                    switch(event.key.keysym.sym)
+                    {
+                    case SDLK_LEFT:
+                         delta = -10.0;
+                         break;
+                    case SDLK_RIGHT:
+                         delta = 10.0;
+                         break;
+                    case SDLK_UP:
+                         delta = -60.0;
+                         break;
+                    case SDLK_DOWN:
+                         delta = 60.0;
+                         break;
+                    default:
+                         goto IGNORE_KEY;
+                    }
+
+                    SA_seek(sa_ctx, get_clock() - start_time + delta, delta);
+
+                    /*
+                    start_time -= delta;
+                    if(start_time > get_clock())
+                         start_time = get_clock();
+                    */
+
+                    // FIXME: should call this only when EOF encountered?
+                    SDL_PauseAudio(0);
+
+                    if(vp != NULL)
+                    {
+                         av_free(vp->frame_ptr);
+                         free(vp);
+                         vp = NULL;
+                    }
+
+                    // FIXME: wtf is this?
+                    vp = SA_get_vp(sa_ctx);
+                    if(vp == NULL)
+                    {
+                         goto EXIT_LOOP; // FIXME: eof?
+                    }
+
+                    show_frame(vp->frame_ptr, overlay);
+                    //SAVE_FRAME(vp);
+                    start_time = get_clock() - vp->pts;
+                    
+               IGNORE_KEY:;
+               }
      }
 
+EXIT_LOOP:
+
+     if(vp != NULL)
+     {
+          av_free(vp->frame_ptr);
+          free(vp);
+     }
      sa_ctx->video_eof = 1;
 
      while(!sa_ctx->audio_eof)
      {
-          SDL_PollEvent(&event); // FIXME: can someone make this block?
-          if(event.type == SDL_QUIT)
+          SDL_WaitEvent(&event);
+          if(event.type == SDL_QUIT) // FIXME: what about the else?
           {
                sa_ctx->audio_eof = 1;
                break;
           }
-          SDL_Delay(10); // FIXME: BAD design: I *HATE* magic numbers.
      }
 
 PROGRAM_QUIT:
 
      SA_close(sa_ctx);
-
-     SDL_CloseAudio();
      
+     SDL_CloseAudio();
      SDL_Quit();
      
      return 0;

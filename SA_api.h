@@ -46,7 +46,7 @@ SAAudioPacket *SA_get_ap(SAContext *);
 
 SAVideoPacket *SA_get_vp(SAContext *);
 
-//void SA_seek(SAContext *);
+void SA_seek(SAContext *, double, double);
 
 int _SA_decode_packet(SAContext *);
 

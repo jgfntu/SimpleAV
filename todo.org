@@ -5,6 +5,12 @@
 *** TODO handle with static variables in audio_callback while seeking.
     modify test.c only. user's behavior.
     'sa_ap' needs to be freed.
+*** TODO modify SA_seek to handle with error caused by seeking.
+*** TODO when EOF encountered, test.c need to call SDL_PauseAudio(0).
+    and modify start_time correctly.
+*** TODO seek_flags for avformat_seek_file()
+*** TODO seek_min/max +- 2??????????
+*** TODO set discard?
 ** TODO sync video to audio, or sync both of them to external clock.
    need to maintain video/audio clock.
 
@@ -19,12 +25,12 @@
 
 
 * to make it perfect
+** TODO reset img_convert_ctx when 'video size' changes.             :test.c:
 ** TODO modify _SA_decode_packet to make it neater.                  :SA_api:
 ** TODO add precise EOF detect/decodeing error report                :test.c:SA_api:
-** TODO make SDL_PollEvent block? No 'SDL_Delay(10)' any more!       :test.c:
-   block: SDL_WaitEvent()
 ** TODO improve SA_init, make its return value meaningful.           :SA_api:
    or change it into 'void SA_init(void)'.
 
 * not clear yet
-** TODO get clear what AUDIO_S16SYS is                               :test.c:
+** TODO get clear what AUDIO_S16SYS is.                              :test.c:
+** TODO figure out what caused the high CPU occupation.

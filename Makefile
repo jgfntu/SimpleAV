@@ -24,3 +24,10 @@ SAQueue_g.o: SAQueue.c SAQueue.h
 
 clean:
 	rm *.o
+
+# check and tuto08 are only for debugging.
+check: check.c
+	gcc check.c -o check
+
+tuto08: tutorial08.c
+	gcc tutorial08.c -o tuto08 `pkg-config --static --libs libavcodec libavformat libswscale` -lSDL 
