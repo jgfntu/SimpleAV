@@ -1,7 +1,10 @@
 SimpleAV is still under heavy development. Thank you for your interest.
 
-Current version is 0.0.3, based on libav v0.6.2.
-Still does not support seeking yet; and you need to do the syncing job yourself.
+Current version is 0.0.3b, based on libav v0.6.2.
+Added support for seeking, but sarcastically, the sample code, test.c, is still very buggy.
+Still do you need to do the syncing job yourself.
+
+This is only a preview version(to show I'm still working on it), so the code is not very neat.
 
 Sample code is written in "test.c". You could compile it with "make".
 Don't forget to install libav v0.6.2 first.
