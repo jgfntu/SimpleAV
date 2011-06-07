@@ -2,15 +2,14 @@
 
 * on going
 ** TODO add seeking support.
-*** TODO handle with static variables in audio_callback while seeking.
-    modify test.c only. user's behavior.
-    'sa_ap' needs to be freed.
 *** TODO modify SA_seek to handle with error caused by seeking.
 *** TODO when EOF encountered, test.c need to call SDL_PauseAudio(0).
     and modify start_time correctly.
-*** TODO seek_flags for avformat_seek_file()
-*** TODO seek_min/max +- 2??????????
-*** TODO set discard?
+*** TODO avformat_seek_file() / av_seek_frame()
+***** avformat_seek_file()
+      seek_flags; seek_min/max +- 2; set discard;
+***** av_seek_frame()
+      bug???
 ** TODO sync video to audio, or sync both of them to external clock.
    need to maintain video/audio clock.
 
