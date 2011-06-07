@@ -47,7 +47,7 @@ SAContext *SA_open(char *filename)
           goto OPEN_FAIL;
 
      /* FIXME: debug */
-     // dump_format(avfmt_ctx_ptr, 0, filename, 0);
+     dump_format(avfmt_ctx_ptr, 0, filename, 0);
 
      /* getting the video stream */
      for(i = 0; i < avfmt_ctx_ptr->nb_streams; i++)
@@ -234,15 +234,10 @@ int _SA_decode_packet(SAContext *sa_ctx)
      /* use mutex to lock this func. */
      SDL_mutexP(sa_ctx->decode_lock);
 
-     AVFrame *v_frame = sa_ctx->v_frame_t;
-     void *ret;
-     int frame_finished;
+     void *ret = NULL;
      AVPacket packet;
      if(av_read_frame(sa_ctx->avfmt_ctx_ptr, &packet) < 0)
      {
-          // DEBUG
-          // printf("failed to get a new packet!\n");
-          
           SDL_mutexV(sa_ctx->decode_lock);
           return -1;
      }
@@ -251,12 +246,18 @@ int _SA_decode_packet(SAContext *sa_ctx)
      {
           SAVideoPacket *sa_vp_ret;
           uint64_t t_pts;
+          int frame_finished;
+          AVFrame *v_frame = sa_ctx->v_frame_t;
           if(v_frame == NULL)
                v_frame = sa_ctx->v_frame_t = avcodec_alloc_frame();
 
           *(uint64_t *)(sa_ctx->v_codec_ctx->opaque) = packet.pts;
-          avcodec_decode_video2(sa_ctx->v_codec_ctx, v_frame,
-                                &frame_finished, &packet);
+          
+/*          avcodec_decode_video2(sa_ctx->v_codec_ctx, v_frame,
+            &frame_finished, &packet);*/
+          if(avcodec_decode_video2(sa_ctx->v_codec_ctx, v_frame, &frame_finished, &packet) <= 0)
+               printf("Wow!\n");
+          
           if(frame_finished)
           {
                ret = malloc(sizeof(SAVideoPacket));
@@ -280,11 +281,7 @@ int _SA_decode_packet(SAContext *sa_ctx)
                if(t_pts != 0)
                     sa_vp_ret->pts = t_pts * av_q2d(sa_ctx->video_st->time_base);
                else
-               {
                     sa_vp_ret->pts = sa_ctx->video_clock;
-                    // DEBUG
-                    // printf("cal by hand\n");
-               }
                
                double frame_delay = av_q2d(sa_ctx->video_st->codec->time_base);
                frame_delay += v_frame->repeat_pict * (frame_delay * 0.5);
@@ -307,37 +304,52 @@ int _SA_decode_packet(SAContext *sa_ctx)
           
           while(pkt_t.size > 0)
           {
-               ret = malloc(sizeof(SAAudioPacket));
-               sa_ap_ret = (SAAudioPacket *)ret;
-               if(sa_ap_ret != NULL)
-                    sa_ap_ret->abuffer = av_malloc(sizeof(uint8_t) * SAABUFFER_SIZE);
-               
-               if(ret == NULL || sa_ap_ret->abuffer == NULL)
+               if(ret == NULL)
                {
-                    if(ret != NULL)
-                         free(ret);
-                    printf("malloc for SAAudioPacket failed\n");
-                    goto DECODE_FAILED;
+                    ret = malloc(sizeof(SAAudioPacket));
+                    sa_ap_ret = (SAAudioPacket *)ret;
+                    if(sa_ap_ret != NULL)
+                         sa_ap_ret->abuffer = av_malloc(sizeof(uint8_t) * SAABUFFER_SIZE);
+               
+                    if(ret == NULL || sa_ap_ret->abuffer == NULL)
+                    {
+                         if(ret != NULL)
+                              free(ret);
+                         printf("malloc for SAAudioPacket failed\n");
+                         goto DECODE_FAILED;
+                    }
                }
 
                data_size = sizeof(uint8_t) * SAABUFFER_SIZE;
                decoded_size = avcodec_decode_audio3(sa_ctx->a_codec_ctx,
                                                     (int16_t *)(sa_ap_ret->abuffer),
                                                     &data_size, &pkt_t);
-               if(decoded_size < 0 || data_size <= 0)
+
+               if(decoded_size <= 0) // FIXME: "if error, we skip the frame"
                {
                     av_free(sa_ap_ret->abuffer);
-                    free(ret); // FIXME: handle data_size <= 0 in a different way?
-                    printf("error on decoding\n");
-                    goto DECODE_FAILED; // FIXME: decoding error report
+                    free(ret);
+                    ret = NULL;
+                    
+                    // DEBUG
+                    printf("skip this audio frame.\n");
+                    
+                    break;
                }
-
+               
                pkt_t.data += decoded_size;
                pkt_t.size -= decoded_size;
+               
+               if(data_size <= 0)
+               {
+                    printf("got nothing?\n");
+                    continue;
+               }
 
                sa_ap_ret->len = data_size;
 
                SAQ_push(sa_ctx->aq_ctx, sa_ap_ret);
+               ret = NULL;
           }
           av_free_packet(&packet);
      }

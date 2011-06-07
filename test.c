@@ -155,6 +155,7 @@ int main(int argc, char *argv[])
                     av_free(vp->frame_ptr);
                     free(vp);
                }
+          
                vp = SA_get_vp(sa_ctx);
                if(vp == NULL)
                     goto EXIT_LOOP; // FIXME: EOF encountered?
@@ -166,15 +167,11 @@ int main(int argc, char *argv[])
                usleep(w_clock * 1000 + 1);
                w_clock = vp->pts - (get_clock() - start_time);
           }
-          /*
-          if(w_clock >= 0)
-               usleep(w_clock * 1000 + 10); // SDL_Delay(w_clock * 1000 + 15);
-          */
 
           //printf("%f\n", vp->pts - (get_clock() - start_time));
 
           show_frame(vp->frame_ptr, overlay);
-          //SAVE_FRAME(vp);
+          // SAVE_FRAME(vp);
 
           // printf("entering the event loop:\n");
           while(SDL_PollEvent(&event))
@@ -230,7 +227,7 @@ int main(int argc, char *argv[])
                     }
 
                     show_frame(vp->frame_ptr, overlay);
-                    //SAVE_FRAME(vp);
+                    // SAVE_FRAME(vp);
                     start_time = get_clock() - vp->pts;
                     
                IGNORE_KEY:;
