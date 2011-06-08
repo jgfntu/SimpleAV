@@ -10,8 +10,13 @@
 #define SDL_AUDIO_BUFFER_SIZE 512
 
 // DEBUG
-//#define SAVE_FRAME(vp) {sprintf(p_filename,"dbg/PTS%f.bmp",vp->pts);SDL_SaveBMP(screen,p_filename);}
-// char p_filename[512];
+int p_id = 0;
+char p_filename[512];
+#define SAVE_FRAME(vp)                                                \
+     {                                                                \
+          sprintf(p_filename, "dbg/%04d_PTS%f.bmp", ++p_id,vp->pts);  \
+          SDL_SaveBMP(screen, p_filename);                            \
+     }
 
 SAContext *sa_ctx = NULL;
 struct SwsContext *img_convert_ctx;
@@ -83,6 +88,15 @@ void audio_callback(void *data, uint8_t *stream, int len)
                audio_buf_index = 0;
           }
      }
+
+     // DEBUG
+     /*
+     while(sa_ctx->vq_ctx->nb < 3 || sa_ctx->aq_ctx->nb < 3)
+     {
+          printf("vq:%d aq:%d\n", sa_ctx->vq_ctx->nb, sa_ctx->aq_ctx->nb);
+          _SA_decode_packet(sa_ctx);
+     }
+     */
 }
 
 double get_clock(void)
@@ -140,15 +154,28 @@ int main(int argc, char *argv[])
           goto PROGRAM_QUIT;
      }
 
+     // DEBUG
+     /*
+     while(sa_ctx->vq_ctx->nb < 3 || sa_ctx->aq_ctx->nb < 3)
+     {
+          printf("vq:%d aq:%d\n", sa_ctx->vq_ctx->nb, sa_ctx->aq_ctx->nb);
+          _SA_decode_packet(sa_ctx);
+     }
+     */
+
      SDL_PauseAudio(0);
      double start_time = get_clock();
+     double last_pts;
 
      SDL_Event event;
      double w_clock;
      SAVideoPacket *vp = NULL;
-     while(!sa_ctx->video_eof)
+     while(!(sa_ctx->video_eof && sa_ctx->audio_eof))
      {
-          while(vp == NULL || vp->pts < get_clock() - start_time)
+          if(sa_ctx->video_eof)
+               goto SKIP_VIDEO;
+
+          while(vp == NULL || vp->pts <= get_clock() - start_time)
           {
                if(vp != NULL)
                {
@@ -158,22 +185,34 @@ int main(int argc, char *argv[])
           
                vp = SA_get_vp(sa_ctx);
                if(vp == NULL)
-                    goto EXIT_LOOP; // FIXME: EOF encountered?
+               {
+                    sa_ctx->video_eof = 1;
+                    goto SKIP_VIDEO; // FIXME: EOF encountered?
+               }
           }
 
           w_clock = vp->pts - (get_clock() - start_time);
           while (w_clock >= 0.0)
           {
                usleep(w_clock * 1000 + 1);
+               printf("sleep: %f\n", w_clock);
                w_clock = vp->pts - (get_clock() - start_time);
           }
 
-          //printf("%f\n", vp->pts - (get_clock() - start_time));
-
+          last_pts = vp->pts;
           show_frame(vp->frame_ptr, overlay);
+          // DEBUG
+          double dbg_t = get_clock();
+          while(sa_ctx->vq_ctx->nb < 3 || sa_ctx->aq_ctx->nb < 3)
+          {
+               //printf("vq:%d aq:%d\n", sa_ctx->vq_ctx->nb, sa_ctx->aq_ctx->nb);
+               _SA_decode_packet(sa_ctx);
+          }
+          printf("time used: %f\n", get_clock() - dbg_t);
           // SAVE_FRAME(vp);
 
-          // printf("entering the event loop:\n");
+     SKIP_VIDEO:
+
           while(SDL_PollEvent(&event))
                if(event.type == SDL_QUIT)
                {
@@ -201,13 +240,12 @@ int main(int argc, char *argv[])
                          goto IGNORE_KEY;
                     }
 
-                    SA_seek(sa_ctx, get_clock() - start_time + delta, delta);
-
-                    /*
-                    start_time -= delta;
-                    if(start_time > get_clock())
-                         start_time = get_clock();
-                    */
+                    // DEBUG
+                    //SA_seek(sa_ctx, get_clock() - start_time + delta, delta);
+                    SA_seek(sa_ctx, last_pts + delta, delta);
+                    
+                    // DEBUG
+                    printf("Seeking to: %f\n", last_pts + delta);
 
                     // FIXME: should call this only when EOF encountered?
                     SDL_PauseAudio(0);
@@ -219,38 +257,40 @@ int main(int argc, char *argv[])
                          vp = NULL;
                     }
 
-                    // FIXME: wtf is this?
                     vp = SA_get_vp(sa_ctx);
                     if(vp == NULL)
                     {
-                         goto EXIT_LOOP; // FIXME: eof?
+                         sa_ctx->video_eof = 1;
+                         goto SKIP_VIDEO; // FIXME: eof?
                     }
 
+                    // DEBUG
+                    printf("But in fact: %f\n", vp->pts);
+
+                    last_pts = vp->pts;
                     show_frame(vp->frame_ptr, overlay);
+                    // DEBUG
+                    /*
+                    while(sa_ctx->vq_ctx->nb < 3 || sa_ctx->aq_ctx->nb < 3)
+                    {
+                         printf("vq:%d aq:%d\n", sa_ctx->vq_ctx->nb, sa_ctx->aq_ctx->nb);
+                         _SA_decode_packet(sa_ctx);
+                    }
+                    */
                     // SAVE_FRAME(vp);
                     start_time = get_clock() - vp->pts;
+
+                    // DEBUG
+                    //printf("video clock: %f\n\n", get_clock() - start_time);
                     
                IGNORE_KEY:;
                }
      }
 
-EXIT_LOOP:
-
      if(vp != NULL)
      {
           av_free(vp->frame_ptr);
           free(vp);
-     }
-     sa_ctx->video_eof = 1;
-
-     while(!sa_ctx->audio_eof)
-     {
-          SDL_WaitEvent(&event);
-          if(event.type == SDL_QUIT) // FIXME: what about the else?
-          {
-               sa_ctx->audio_eof = 1;
-               break;
-          }
      }
 
 PROGRAM_QUIT:
