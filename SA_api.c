@@ -71,16 +71,9 @@ SAContext *SA_open(char *filename)
      avfmt_ctx_ptr->streams[a_stream]->discard = AVDISCARD_DEFAULT;
      avfmt_ctx_ptr->streams[v_stream]->discard = AVDISCARD_DEFAULT;
 
-     /* getting the codec */
+     /* AVCodecContext */
      ctx_p->v_codec_ctx = v_codec_ctx = avfmt_ctx_ptr->streams[v_stream]->codec;
-     ctx_p->v_codec = v_codec = avcodec_find_decoder(v_codec_ctx->codec_id);
      ctx_p->a_codec_ctx = a_codec_ctx = avfmt_ctx_ptr->streams[a_stream]->codec;
-     ctx_p->a_codec = a_codec = avcodec_find_decoder(a_codec_ctx->codec_id);
-     if(v_codec == NULL || a_codec == NULL)
-     {
-          fprintf(stderr, "Unsupported codec!\n");
-          goto OPEN_FAIL;
-     }
 
      /* set audio_st and video_st */
      ctx_p->audio_st = avfmt_ctx_ptr->streams[a_stream];
@@ -88,10 +81,6 @@ SAContext *SA_open(char *filename)
      
      /* FIXME: downmix, but seems like a dirty hack. */
      ctx_p->a_codec_ctx->request_channels = FFMIN(2, ctx_p->a_codec_ctx->channels);
-
-     if(avcodec_open(v_codec_ctx, v_codec) < 0 ||
-        avcodec_open(a_codec_ctx, a_codec) < 0)
-          goto OPEN_FAIL;
 
      /* set our userdata for calculating PTS */
      v_codec_ctx->get_buffer = _SA_get_buffer;
@@ -104,6 +93,19 @@ SAContext *SA_open(char *filename)
      }
      *(uint64_t *)(v_codec_ctx->opaque) = AV_NOPTS_VALUE;
      
+     /* getting the codec */
+     ctx_p->v_codec = v_codec = avcodec_find_decoder(v_codec_ctx->codec_id);
+     ctx_p->a_codec = a_codec = avcodec_find_decoder(a_codec_ctx->codec_id);
+     if(v_codec == NULL || a_codec == NULL)
+     {
+          fprintf(stderr, "Unsupported codec!\n");
+          goto OPEN_FAIL;
+     }
+
+     if(avcodec_open(v_codec_ctx, v_codec) < 0 ||
+        avcodec_open(a_codec_ctx, a_codec) < 0)
+          goto OPEN_FAIL;
+
      /* setting other useful variables */
      ctx_p->v_width = ctx_p->v_codec_ctx->width;
      ctx_p->v_height = ctx_p->v_codec_ctx->height;
@@ -248,13 +250,12 @@ int _SA_decode_packet(SAContext *sa_ctx)
           uint64_t t_pts;
           int frame_finished;
           AVFrame *v_frame = sa_ctx->v_frame_t;
+
+          *(uint64_t *)(sa_ctx->v_codec_ctx->opaque) = packet.pts;
+
           if(v_frame == NULL)
                v_frame = sa_ctx->v_frame_t = avcodec_alloc_frame();
 
-          *(uint64_t *)(sa_ctx->v_codec_ctx->opaque) = packet.pts;
-          
-/*          avcodec_decode_video2(sa_ctx->v_codec_ctx, v_frame,
-            &frame_finished, &packet);*/
           if(avcodec_decode_video2(sa_ctx->v_codec_ctx, v_frame, &frame_finished, &packet) <= 0)
                printf("Wow!\n");
           

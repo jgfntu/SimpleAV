@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
      /*
      while(sa_ctx->vq_ctx->nb < 3 || sa_ctx->aq_ctx->nb < 3)
      {
-          printf("vq:%d aq:%d\n", sa_ctx->vq_ctx->nb, sa_ctx->aq_ctx->nb);
+          // printf("vq:%d aq:%d\n", sa_ctx->vq_ctx->nb, sa_ctx->aq_ctx->nb);
           _SA_decode_packet(sa_ctx);
      }
      */
@@ -195,13 +195,13 @@ int main(int argc, char *argv[])
           while (w_clock >= 0.0)
           {
                usleep(w_clock * 1000 + 1);
-               printf("sleep: %f\n", w_clock);
                w_clock = vp->pts - (get_clock() - start_time);
           }
 
           last_pts = vp->pts;
           show_frame(vp->frame_ptr, overlay);
           // DEBUG
+          /*
           double dbg_t = get_clock();
           while(sa_ctx->vq_ctx->nb < 3 || sa_ctx->aq_ctx->nb < 3)
           {
@@ -209,6 +209,7 @@ int main(int argc, char *argv[])
                _SA_decode_packet(sa_ctx);
           }
           printf("time used: %f\n", get_clock() - dbg_t);
+          */
           // SAVE_FRAME(vp);
 
      SKIP_VIDEO:
@@ -240,13 +241,8 @@ int main(int argc, char *argv[])
                          goto IGNORE_KEY;
                     }
 
-                    // DEBUG
-                    //SA_seek(sa_ctx, get_clock() - start_time + delta, delta);
                     SA_seek(sa_ctx, last_pts + delta, delta);
                     
-                    // DEBUG
-                    printf("Seeking to: %f\n", last_pts + delta);
-
                     // FIXME: should call this only when EOF encountered?
                     SDL_PauseAudio(0);
 
@@ -264,25 +260,21 @@ int main(int argc, char *argv[])
                          goto SKIP_VIDEO; // FIXME: eof?
                     }
 
-                    // DEBUG
-                    printf("But in fact: %f\n", vp->pts);
-
                     last_pts = vp->pts;
                     show_frame(vp->frame_ptr, overlay);
+                    
                     // DEBUG
                     /*
                     while(sa_ctx->vq_ctx->nb < 3 || sa_ctx->aq_ctx->nb < 3)
                     {
-                         printf("vq:%d aq:%d\n", sa_ctx->vq_ctx->nb, sa_ctx->aq_ctx->nb);
+                         // printf("vq:%d aq:%d\n", sa_ctx->vq_ctx->nb, sa_ctx->aq_ctx->nb);
                          _SA_decode_packet(sa_ctx);
                     }
                     */
+                    
                     // SAVE_FRAME(vp);
                     start_time = get_clock() - vp->pts;
 
-                    // DEBUG
-                    //printf("video clock: %f\n\n", get_clock() - start_time);
-                    
                IGNORE_KEY:;
                }
      }
@@ -298,6 +290,7 @@ PROGRAM_QUIT:
      SA_close(sa_ctx);
      
      SDL_CloseAudio();
+     SDL_FreeYUVOverlay(overlay);
      SDL_Quit();
      
      return 0;
