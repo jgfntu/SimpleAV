@@ -9,21 +9,11 @@
 
 #define SDL_AUDIO_BUFFER_SIZE 512
 
-// DEBUG
-int p_id = 0;
-char p_filename[512];
-#define SAVE_FRAME(vp)                                                \
-     {                                                                \
-          sprintf(p_filename, "dbg/%04d_PTS%f.bmp", ++p_id,vp->pts);  \
-          SDL_SaveBMP(screen, p_filename);                            \
-     }
-
 SAContext *sa_ctx = NULL;
 struct SwsContext *img_convert_ctx;
 
 void show_frame(AVFrame *frame, SDL_Overlay *overlay)
 {
-     // "Show" frame
      int w = sa_ctx->v_width, h = sa_ctx->v_height;
      SDL_LockYUVOverlay(overlay);
      
@@ -63,11 +53,10 @@ void audio_callback(void *data, uint8_t *stream, int len)
           if(sa_ap == NULL)
                sa_ap = SA_get_ap(sa_ctx);
 
-          if(sa_ap == NULL) // cannot get SAAudioPacket: maybe EOF encountered.
+          if(sa_ap == NULL)
           {
                sa_ctx->audio_eof = 1;
                memset(stream, 0, len);
-               
                SDL_PauseAudio(1);
                return; // FIXME: *MAYBE* eof encountered. what if... ?
           }
@@ -88,15 +77,6 @@ void audio_callback(void *data, uint8_t *stream, int len)
                audio_buf_index = 0;
           }
      }
-
-     // DEBUG
-     /*
-     while(sa_ctx->vq_ctx->nb < 3 || sa_ctx->aq_ctx->nb < 3)
-     {
-          printf("vq:%d aq:%d\n", sa_ctx->vq_ctx->nb, sa_ctx->aq_ctx->nb);
-          _SA_decode_packet(sa_ctx);
-     }
-     */
 }
 
 double get_clock(void)
@@ -106,9 +86,6 @@ double get_clock(void)
 
 int main(int argc, char *argv[])
 {
-     // DEBUG
-     // freopen("log.txt", "w", stdout);
-     
      if(argc != 2)
      {
           printf("Usage:\ntest <filename>\n");
@@ -154,18 +131,8 @@ int main(int argc, char *argv[])
           goto PROGRAM_QUIT;
      }
 
-     // DEBUG
-     /*
-     while(sa_ctx->vq_ctx->nb < 3 || sa_ctx->aq_ctx->nb < 3)
-     {
-          // printf("vq:%d aq:%d\n", sa_ctx->vq_ctx->nb, sa_ctx->aq_ctx->nb);
-          _SA_decode_packet(sa_ctx);
-     }
-     */
-
      SDL_PauseAudio(0);
      double start_time = get_clock();
-     double last_pts;
 
      SDL_Event event;
      double w_clock;
@@ -182,7 +149,7 @@ int main(int argc, char *argv[])
                     av_free(vp->frame_ptr);
                     free(vp);
                }
-          
+               
                vp = SA_get_vp(sa_ctx);
                if(vp == NULL)
                {
@@ -190,7 +157,7 @@ int main(int argc, char *argv[])
                     goto SKIP_VIDEO; // FIXME: EOF encountered?
                }
           }
-
+          
           w_clock = vp->pts - (get_clock() - start_time);
           while (w_clock >= 0.0)
           {
@@ -198,19 +165,7 @@ int main(int argc, char *argv[])
                w_clock = vp->pts - (get_clock() - start_time);
           }
 
-          last_pts = vp->pts;
           show_frame(vp->frame_ptr, overlay);
-          // DEBUG
-          /*
-          double dbg_t = get_clock();
-          while(sa_ctx->vq_ctx->nb < 3 || sa_ctx->aq_ctx->nb < 3)
-          {
-               //printf("vq:%d aq:%d\n", sa_ctx->vq_ctx->nb, sa_ctx->aq_ctx->nb);
-               _SA_decode_packet(sa_ctx);
-          }
-          printf("time used: %f\n", get_clock() - dbg_t);
-          */
-          // SAVE_FRAME(vp);
 
      SKIP_VIDEO:
 
@@ -241,7 +196,7 @@ int main(int argc, char *argv[])
                          goto IGNORE_KEY;
                     }
 
-                    SA_seek(sa_ctx, last_pts + delta, delta);
+                    SA_seek(sa_ctx, get_clock() - start_time + delta, delta);
                     
                     // FIXME: should call this only when EOF encountered?
                     SDL_PauseAudio(0);
@@ -256,23 +211,13 @@ int main(int argc, char *argv[])
                     vp = SA_get_vp(sa_ctx);
                     if(vp == NULL)
                     {
+                         printf("...what?\n");
+                         
                          sa_ctx->video_eof = 1;
                          goto SKIP_VIDEO; // FIXME: eof?
                     }
 
-                    last_pts = vp->pts;
                     show_frame(vp->frame_ptr, overlay);
-                    
-                    // DEBUG
-                    /*
-                    while(sa_ctx->vq_ctx->nb < 3 || sa_ctx->aq_ctx->nb < 3)
-                    {
-                         // printf("vq:%d aq:%d\n", sa_ctx->vq_ctx->nb, sa_ctx->aq_ctx->nb);
-                         _SA_decode_packet(sa_ctx);
-                    }
-                    */
-                    
-                    // SAVE_FRAME(vp);
                     start_time = get_clock() - vp->pts;
 
                IGNORE_KEY:;
@@ -288,7 +233,6 @@ int main(int argc, char *argv[])
 PROGRAM_QUIT:
 
      SA_close(sa_ctx);
-     
      SDL_CloseAudio();
      SDL_FreeYUVOverlay(overlay);
      SDL_Quit();

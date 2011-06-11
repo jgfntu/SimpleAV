@@ -1,32 +1,23 @@
 #+STARTUP: showall
 
 * on going
-** TODO add seeking support.
-*** TODO modify SA_seek to handle with error caused by seeking.
-*** TODO when EOF encountered, test.c need to call SDL_PauseAudio(0).
-    and modify start_time correctly.
-*** TODO avformat_seek_file() / av_seek_frame()
-***** avformat_seek_file()
-      seek_flags; seek_min/max +- 2; set discard;
-***** av_seek_frame()
-      bug???
+** TODO redesign SimpleAV to make it easier to use.
+   as simple as sf::sfeMovie.
+   let SimpleAV do the dirty syncing job.
 ** TODO sync video to audio, or sync both of them to external clock.
    need to maintain video/audio clock.
-
 
 * future
 ** TODO replace SDL/mutex with other implementations.
    so, write a 'configure', then rewrite 'Makefile'.
    it seems that pthread_mutex_* would work well under linux/BSD.
 ** TODO add support for manually downmixing.
-   add a parameter to SA_open().
+   add a parameter to SA_open()?
 ** TODO subtitle support
-
+   is that necessary?
 
 * to make it perfect
 ** TODO reset img_convert_ctx when 'video size' changes.             :test.c:
-** TODO modify _SA_decode_packet to make it neater.                  :SA_api:
-** TODO add precise EOF detect/decodeing error report                :test.c:SA_api:
 ** TODO improve SA_init, make its return value meaningful.           :SA_api:
    or change it into 'void SA_init(void)'.
 

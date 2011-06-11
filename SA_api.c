@@ -27,16 +27,16 @@ SAContext *SA_open(char *filename)
      SAContext *ctx_p = (SAContext *) malloc(sizeof(SAContext));
      if(ctx_p == NULL)
           goto OPEN_FAIL;
-     ctx_p->vq_ctx = ctx_p->aq_ctx = NULL;
+     ctx_p->vpq_ctx = ctx_p->apq_ctx = ctx_p->aq_ctx = NULL;
      ctx_p->avfmt_ctx_ptr = NULL;
-     ctx_p->v_frame_t = NULL;
      ctx_p->audio_eof = ctx_p->video_eof = FALSE;
      
      /* init the queue for storing decoder's output */
      ctx_p->filename = filename;
-     ctx_p->vq_ctx = SAQ_init();
+     ctx_p->vpq_ctx = SAQ_init();
+     ctx_p->apq_ctx = SAQ_init();
      ctx_p->aq_ctx = SAQ_init();
-     if(ctx_p->vq_ctx == NULL || ctx_p->aq_ctx == NULL)
+     if(ctx_p->vpq_ctx == NULL || ctx_p->apq_ctx == NULL || ctx_p->aq_ctx == NULL)
           goto OPEN_FAIL;
 
      /* opening the file */
@@ -65,23 +65,9 @@ SAContext *SA_open(char *filename)
           goto OPEN_FAIL;
      ctx_p->a_stream = a_stream = i;
 
-     // FIXME: setting discard
-     for(i = 0; i < avfmt_ctx_ptr->nb_streams; i++)
-          avfmt_ctx_ptr->streams[i]->discard = AVDISCARD_ALL;
-     avfmt_ctx_ptr->streams[a_stream]->discard = AVDISCARD_DEFAULT;
-     avfmt_ctx_ptr->streams[v_stream]->discard = AVDISCARD_DEFAULT;
-
-     /* AVCodecContext */
      ctx_p->v_codec_ctx = v_codec_ctx = avfmt_ctx_ptr->streams[v_stream]->codec;
      ctx_p->a_codec_ctx = a_codec_ctx = avfmt_ctx_ptr->streams[a_stream]->codec;
-
-     /* set audio_st and video_st */
-     ctx_p->audio_st = avfmt_ctx_ptr->streams[a_stream];
-     ctx_p->video_st = avfmt_ctx_ptr->streams[v_stream];
      
-     /* FIXME: downmix, but seems like a dirty hack. */
-     ctx_p->a_codec_ctx->request_channels = FFMIN(2, ctx_p->a_codec_ctx->channels);
-
      /* set our userdata for calculating PTS */
      v_codec_ctx->get_buffer = _SA_get_buffer;
      v_codec_ctx->release_buffer = _SA_release_buffer;
@@ -92,6 +78,26 @@ SAContext *SA_open(char *filename)
           goto OPEN_FAIL;
      }
      *(uint64_t *)(v_codec_ctx->opaque) = AV_NOPTS_VALUE;
+
+     /* getting the codec */
+     ctx_p->v_codec = v_codec = avcodec_find_decoder(v_codec_ctx->codec_id);
+     ctx_p->a_codec = a_codec = avcodec_find_decoder(a_codec_ctx->codec_id);
+     if(v_codec == NULL || a_codec == NULL)
+     {
+          fprintf(stderr, "Unsupported codec!\n");
+          goto OPEN_FAIL;
+     }
+
+     /* set audio_st and video_st */
+     ctx_p->audio_st = avfmt_ctx_ptr->streams[a_stream];
+     ctx_p->video_st = avfmt_ctx_ptr->streams[v_stream];
+     
+     /* FIXME: downmix, but seems like a dirty hack. */
+     ctx_p->a_codec_ctx->request_channels = FFMIN(2, ctx_p->a_codec_ctx->channels);
+
+     if(avcodec_open(v_codec_ctx, v_codec) < 0 ||
+        avcodec_open(a_codec_ctx, a_codec) < 0)
+          goto OPEN_FAIL;
      
      /* getting the codec */
      ctx_p->v_codec = v_codec = avcodec_find_decoder(v_codec_ctx->codec_id);
@@ -112,7 +118,9 @@ SAContext *SA_open(char *filename)
      ctx_p->video_clock = 0.0f;
 
      /* create the mutex needed to lock _SA_decode_packet(). */
-     ctx_p->decode_lock = SDL_CreateMutex();
+     ctx_p->vpq_lock = SDL_CreateMutex();
+     ctx_p->apq_lock = SDL_CreateMutex();
+     ctx_p->aq_lock = SDL_CreateMutex();
 
      /* evenything is ok. return the context. */
      return ctx_p;
@@ -124,6 +132,10 @@ OPEN_FAIL:
 
 void SA_close(SAContext *sa_ctx)
 {
+     SDL_mutexP(sa_ctx->vpq_lock);
+     SDL_mutexP(sa_ctx->apq_lock);
+     SDL_mutexP(sa_ctx->aq_lock);
+     
      if(sa_ctx == NULL)
           return;
      if(sa_ctx->v_codec_ctx != NULL)
@@ -136,16 +148,19 @@ void SA_close(SAContext *sa_ctx)
           avcodec_close(sa_ctx->a_codec_ctx);
      if(sa_ctx->avfmt_ctx_ptr != NULL)
           av_close_input_file(sa_ctx->avfmt_ctx_ptr);
-     
+
      void *ptr;
-     if(sa_ctx->vq_ctx != NULL)
+     if(sa_ctx->vpq_ctx != NULL)
      {
-          while((ptr = SAQ_pop(sa_ctx->vq_ctx)) != NULL)
-          {
-               av_free(((SAVideoPacket *)ptr)->frame_ptr);
-               free(ptr);
-          }
-          free(sa_ctx->vq_ctx);
+          while((ptr = SAQ_pop(sa_ctx->vpq_ctx)) != NULL)
+               av_free_packet((AVPacket *)ptr);
+          free(sa_ctx->vpq_ctx);
+     }
+     if(sa_ctx->apq_ctx != NULL)
+     {
+          while((ptr = SAQ_pop(sa_ctx->apq_ctx)) != NULL)
+               av_free_packet((AVPacket *)ptr);
+          free(sa_ctx->apq_ctx);
      }
      if(sa_ctx->aq_ctx != NULL)
      {
@@ -157,215 +172,247 @@ void SA_close(SAContext *sa_ctx)
           free(sa_ctx->aq_ctx);
      }
 
-     if(sa_ctx->v_frame_t != NULL)
-          av_free(sa_ctx->v_frame_t);
-
-     if(sa_ctx->decode_lock != NULL)
-          SDL_DestroyMutex(sa_ctx->decode_lock);
+     if(sa_ctx->vpq_lock != NULL)
+          SDL_DestroyMutex(sa_ctx->vpq_lock);
+     if(sa_ctx->apq_lock != NULL)
+          SDL_DestroyMutex(sa_ctx->apq_lock);
+     if(sa_ctx->aq_lock != NULL)
+          SDL_DestroyMutex(sa_ctx->aq_lock);
      
      free(sa_ctx);
      return;
 }
 
+int _SA_read_packet(SAContext *sa_ctx)
+{
+     AVPacket *packet = (AVPacket *)av_malloc(sizeof(AVPacket));
+     av_init_packet(packet);
+     if(av_read_frame(sa_ctx->avfmt_ctx_ptr, packet) < 0)
+     {
+          av_free(packet);
+          return -1;
+     }
+
+     if(av_dup_packet(packet) != 0)
+     {
+          fprintf(stderr, "av_dup_packet failed?\n");
+          av_free_packet(packet);
+          return -1;
+     }
+     
+     if(packet->stream_index == sa_ctx->v_stream)
+     {
+          SDL_mutexP(sa_ctx->vpq_lock);
+          SAQ_push(sa_ctx->vpq_ctx, packet);
+          SDL_mutexV(sa_ctx->vpq_lock);
+     } else if(packet->stream_index == sa_ctx->a_stream)
+     {
+          SDL_mutexP(sa_ctx->apq_lock);
+          SAQ_push(sa_ctx->apq_ctx, packet);
+          SDL_mutexV(sa_ctx->apq_lock);
+     }
+
+     return 0;
+}
+
 SAVideoPacket *SA_get_vp(SAContext *sa_ctx)
 {
-     SAVideoPacket *ret = NULL;
-     while((ret = SAQ_pop(sa_ctx->vq_ctx)) == NULL)
-          if(_SA_decode_packet(sa_ctx) < 0)
-               return NULL;
+     SAVideoPacket *ret;
+     int frame_finished = 0;
+     AVPacket *packet = NULL;
+     AVFrame *v_frame = NULL;
+     uint64_t last_dts;
+     while(!frame_finished)
+     {
+          while(packet == NULL)
+          {
+               SDL_mutexP(sa_ctx->vpq_lock);
+               packet = SAQ_pop(sa_ctx->vpq_ctx);
+               SDL_mutexV(sa_ctx->vpq_lock);
+               if(packet == NULL)
+                    if(_SA_read_packet(sa_ctx) < 0)
+                    {
+                         if(v_frame != NULL)
+                              av_free(v_frame);
+                         return NULL;
+                    }
+          }
+
+          *(uint64_t *)(sa_ctx->v_codec_ctx->opaque) = packet->pts;
+          if(v_frame == NULL)
+               v_frame = avcodec_alloc_frame();
+          
+          if(avcodec_decode_video2(sa_ctx->v_codec_ctx, v_frame,
+                                   &frame_finished, packet) <= 0)
+               printf("Wow!\n"); // FIXME: handle this in another way.
+
+          last_dts = packet->dts;
+          av_free_packet(packet);
+          packet = NULL;
+     }
+          
+     ret = malloc(sizeof(SAVideoPacket));
+     if(ret == NULL)
+     {
+          fprintf(stderr, "malloc failed\n");
+          av_free(v_frame);
+          return NULL;
+     }
+     ret->frame_ptr = v_frame;
+
+     uint64_t t_pts;
+     if(last_dts != AV_NOPTS_VALUE)
+          t_pts = last_dts;
+     else if(v_frame->opaque != NULL &&
+             *(uint64_t *)(v_frame->opaque) != AV_NOPTS_VALUE)
+          t_pts = *(uint64_t *)(v_frame->opaque);
+     else
+          t_pts = 0;
+               
+     if(t_pts != 0)
+          ret->pts = t_pts * av_q2d(sa_ctx->video_st->time_base);
+     else
+          ret->pts = sa_ctx->video_clock;
+               
+     double frame_delay = av_q2d(sa_ctx->video_st->codec->time_base);
+     frame_delay += v_frame->repeat_pict * (frame_delay * 0.5);
+     sa_ctx->video_clock = ret->pts + frame_delay;
+
      return ret;
 }
 
 SAAudioPacket *SA_get_ap(SAContext *sa_ctx)
 {
-     SAAudioPacket *ret = NULL;
-     while((ret = SAQ_pop(sa_ctx->aq_ctx)) == NULL)
-          if(_SA_decode_packet(sa_ctx) < 0)
+     SDL_mutexP(sa_ctx->aq_lock);
+     SAAudioPacket *ret = SAQ_pop(sa_ctx->aq_ctx);
+     SDL_mutexV(sa_ctx->aq_lock);
+
+     if(ret != NULL)
+     {
+          printf("out: 1\n");
+          return ret;
+     }
+     
+     AVPacket *packet = NULL, *pkt_temp = &(sa_ctx->pkt_temp);
+     SDL_mutexP(sa_ctx->aq_lock); // to make sure SA_seek() frees ap *completely*.
+     
+NEXT_FRAME:
+
+     while(packet == NULL)
+     {
+          SDL_mutexP(sa_ctx->apq_lock);
+          packet = SAQ_pop(sa_ctx->apq_ctx);
+          SDL_mutexV(sa_ctx->apq_lock);
+
+          if(packet == NULL)
+               if(_SA_read_packet(sa_ctx) < 0)
+               {
+                    SDL_mutexV(sa_ctx->aq_lock);
+                    return NULL;
+               }
+     }
+
+     pkt_temp->data = packet->data;
+     pkt_temp->size = packet->size;
+
+     int data_size, decoded_size;
+     while(pkt_temp->size > 0)
+     {
+          ret = malloc(sizeof(SAAudioPacket));
+          if(ret != NULL)
+               ret->abuffer = av_malloc(sizeof(uint8_t) * SAABUFFER_SIZE);
+          if(ret == NULL || ret->abuffer == NULL)
+          {
+               if(ret != NULL)
+               {
+                    free(ret);
+                    fprintf(stderr, "malloc failed on getting an abuffer\n");
+               } else
+                    fprintf(stderr, "failed on getting a SAAudioPacket buffer\n");
+
+               av_free_packet(packet);
+               SDL_mutexV(sa_ctx->aq_lock);
                return NULL;
+          }
+
+          data_size = sizeof(uint8_t) * SAABUFFER_SIZE;
+          decoded_size = avcodec_decode_audio3(sa_ctx->a_codec_ctx,
+                                               (int16_t *)(ret->abuffer),
+                                               &data_size, pkt_temp);
+          if(decoded_size <= 0)
+          {
+               av_free(ret->abuffer);
+               free(ret);
+               break; // skip this frame
+          }
+
+          pkt_temp->data += decoded_size;
+          pkt_temp->size -= decoded_size;
+
+          if(data_size <= 0)
+          {
+               av_free(ret->abuffer);
+               free(ret);
+               continue;
+          }
+
+          ret->len = data_size;
+          SAQ_push(sa_ctx->aq_ctx, ret);
+     }
+
+     av_free_packet(packet);
+     
+     ret = SAQ_pop(sa_ctx->aq_ctx);
+     if(ret == NULL)
+     {
+          packet = NULL;
+          goto NEXT_FRAME;
+     }
+
+     SDL_mutexV(sa_ctx->aq_lock);
      return ret;
 }
 
 void SA_seek(SAContext *sa_ctx, double seek_to, double delta)
 {
-     SDL_mutexP(sa_ctx->decode_lock);
+     SDL_mutexP(sa_ctx->aq_lock);
+     SDL_mutexP(sa_ctx->apq_lock);
+     SDL_mutexP(sa_ctx->vpq_lock);
      
-     /* avformat_seek_file(); */
-     /*
-     int64_t pos = seek_to * AV_TIME_BASE; // is->seek_pos
-     int64_t incr = delta * AV_TIME_BASE; // is->seek_rel
-     int seek_flags = 0; // FIXME: seek_flags? 0?
-     int64_t seek_min = incr > 0 ? pos - incr + 2 : INT64_MIN;
-     int64_t seek_max = incr < 0 ? pos - incr - 2 : INT64_MAX; // FIXME: "+- 2"?
-     if(avformat_seek_file(sa_ctx->avfmt_ctx_ptr, -1, seek_min, pos, seek_max, seek_flags) < 0)
-          fprintf(stderr, "Error while seeking!\n"); // FIXME
-     */
-     
-     /* av_seek_frame(); */
      int64_t pos = seek_to * AV_TIME_BASE;
      int seek_flags = delta < 0 ? AVSEEK_FLAG_BACKWARD : 0;
      int stream_index = sa_ctx->v_stream;
      int64_t seek_target = av_rescale_q(pos, AV_TIME_BASE_Q,
                                         sa_ctx->video_st->time_base);
      if(av_seek_frame(sa_ctx->avfmt_ctx_ptr, stream_index, seek_target, seek_flags) < 0)
-          fprintf(stderr, "Error while seeking!\n"); // FIXME
+          fprintf(stderr, "Error while seeking!\n"); // FIXME: handle this!
      else
      {
           void *ptr;
-          while((ptr = SAQ_pop(sa_ctx->vq_ctx)) != NULL)
-          {
-               av_free(((SAVideoPacket *)ptr)->frame_ptr);
-               free(ptr);
-          }
+
           while((ptr = SAQ_pop(sa_ctx->aq_ctx)) != NULL)
           {
                av_free(((SAAudioPacket *)ptr)->abuffer);
                free(ptr);
           }
+          
+          while((ptr = SAQ_pop(sa_ctx->vpq_ctx)) != NULL)
+               av_free_packet(ptr);
+          
+          while((ptr = SAQ_pop(sa_ctx->apq_ctx)) != NULL)
+               av_free_packet(ptr);
 
           avcodec_flush_buffers(sa_ctx->a_codec_ctx);
           avcodec_flush_buffers(sa_ctx->v_codec_ctx);
-     }
 
-     sa_ctx->video_clock = seek_to;
-     
-     SDL_mutexV(sa_ctx->decode_lock);
-}
-
-int _SA_decode_packet(SAContext *sa_ctx)
-{
-     /* use mutex to lock this func. */
-     SDL_mutexP(sa_ctx->decode_lock);
-
-     void *ret = NULL;
-     AVPacket packet;
-     if(av_read_frame(sa_ctx->avfmt_ctx_ptr, &packet) < 0)
-     {
-          SDL_mutexV(sa_ctx->decode_lock);
-          return -1;
-     }
-     
-     if(packet.stream_index == sa_ctx->v_stream)
-     {
-          SAVideoPacket *sa_vp_ret;
-          uint64_t t_pts;
-          int frame_finished;
-          AVFrame *v_frame = sa_ctx->v_frame_t;
-
-          *(uint64_t *)(sa_ctx->v_codec_ctx->opaque) = packet.pts;
-
-          if(v_frame == NULL)
-               v_frame = sa_ctx->v_frame_t = avcodec_alloc_frame();
-
-          if(avcodec_decode_video2(sa_ctx->v_codec_ctx, v_frame, &frame_finished, &packet) <= 0)
-               printf("Wow!\n");
+          sa_ctx->video_clock = seek_to;
           
-          if(frame_finished)
-          {
-               ret = malloc(sizeof(SAVideoPacket));
-               sa_vp_ret = (SAVideoPacket *)ret;
-               if(ret == NULL)
-               {
-                    printf("malloc failed\n");
-                    goto DECODE_FAILED; // FIXME: decoding error report
-               }
-               sa_vp_ret->frame_ptr = v_frame;
-
-               /* calculate pts */
-               if(packet.dts != AV_NOPTS_VALUE)
-                    t_pts = packet.dts;
-               else if(v_frame->opaque != NULL &&
-                       *(uint64_t *)(v_frame->opaque) != AV_NOPTS_VALUE)
-                    t_pts = *(uint64_t *)(v_frame->opaque);
-               else
-                    t_pts = 0;
-               
-               if(t_pts != 0)
-                    sa_vp_ret->pts = t_pts * av_q2d(sa_ctx->video_st->time_base);
-               else
-                    sa_vp_ret->pts = sa_ctx->video_clock;
-               
-               double frame_delay = av_q2d(sa_ctx->video_st->codec->time_base);
-               frame_delay += v_frame->repeat_pict * (frame_delay * 0.5);
-               sa_ctx->video_clock = sa_vp_ret->pts + frame_delay;
-
-               /* pts got. push it. */
-               SAQ_push(sa_ctx->vq_ctx, ret);
-               sa_ctx->v_frame_t = NULL;
-          }
-          av_free_packet(&packet);
-     } else if(packet.stream_index == sa_ctx->a_stream)
-     {
-          AVPacket pkt_t;
-          av_init_packet(&pkt_t);
-          pkt_t.data = packet.data;
-          pkt_t.size = packet.size;
-
-          int decoded_size = 0, data_size;
-          SAAudioPacket *sa_ap_ret;
-          
-          while(pkt_t.size > 0)
-          {
-               if(ret == NULL)
-               {
-                    ret = malloc(sizeof(SAAudioPacket));
-                    sa_ap_ret = (SAAudioPacket *)ret;
-                    if(sa_ap_ret != NULL)
-                         sa_ap_ret->abuffer = av_malloc(sizeof(uint8_t) * SAABUFFER_SIZE);
-               
-                    if(ret == NULL || sa_ap_ret->abuffer == NULL)
-                    {
-                         if(ret != NULL)
-                              free(ret);
-                         printf("malloc for SAAudioPacket failed\n");
-                         goto DECODE_FAILED;
-                    }
-               }
-
-               data_size = sizeof(uint8_t) * SAABUFFER_SIZE;
-               decoded_size = avcodec_decode_audio3(sa_ctx->a_codec_ctx,
-                                                    (int16_t *)(sa_ap_ret->abuffer),
-                                                    &data_size, &pkt_t);
-
-               if(decoded_size <= 0) // FIXME: "if error, we skip the frame"
-               {
-                    av_free(sa_ap_ret->abuffer);
-                    free(ret);
-                    ret = NULL;
-                    
-                    // DEBUG
-                    printf("skip this audio frame.\n");
-                    
-                    break;
-               }
-               
-               pkt_t.data += decoded_size;
-               pkt_t.size -= decoded_size;
-               
-               if(data_size <= 0)
-               {
-                    printf("got nothing?\n");
-                    continue;
-               }
-
-               sa_ap_ret->len = data_size;
-
-               SAQ_push(sa_ctx->aq_ctx, sa_ap_ret);
-               ret = NULL;
-          }
-          av_free_packet(&packet);
+          SDL_mutexV(sa_ctx->aq_lock);
+          SDL_mutexV(sa_ctx->vpq_lock);
+          SDL_mutexV(sa_ctx->apq_lock);
      }
-     
-     /* unlock the mutex. */
-     SDL_mutexV(sa_ctx->decode_lock);
 
-     return 0; // FIXME: EOF detection needed
-
-DECODE_FAILED:
-     
-     av_free_packet(&packet);
-     SDL_mutexV(sa_ctx->decode_lock);
-     
-     return -1;
+     return;
 }
 
 int _SA_get_buffer(struct AVCodecContext *c, AVFrame *pic)

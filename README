@@ -1,10 +1,13 @@
-SimpleAV is still under heavy development. Thank you for your interest.
+SimpleAV is usable now. Your comments are always welcome.
+But it is still under heavy development, so the API may change a lot in the future.
 
-Current version is 0.0.3b, based on libav v0.6.2.
-Added support for seeking, but sarcastically, the sample code, test.c, is still very buggy on seeking.
-Still do you need to do the syncing job yourself.
+Current version is 0.0.4, based on libav v0.6.2.
+Seeking is well supported. But the users still have to do the syncing job manually.
 
-This is only a preview version(to show I'm still working on it), so the code is not very neat.
+The next version will be 0.0.5, featuring:
+ * a much simpler and better API;
+ * lower CPU and memory resource occupying;
+ * a revised program structure which will make it easier to bind SimpleAV onto other libraries, like SFML and SDL.
 
-Sample code is written in "test.c". You could compile it with "make".
-Don't forget to install libav v0.6.2 first.
+Sample code is written in "saplayer.c". You could compile it with "make".
+Don't forget to install libav v0.6.2 first. :-P
