@@ -23,15 +23,20 @@ typedef struct SAAudioPacket {
 
 typedef struct SAContext {
      char *filename;
-     SAQContext *vq_ctx, *aq_ctx;
-     SDL_mutex *decode_lock; // FIXME: remove SA's dependency of SDL.
+     //SAQContext *vq_ctx, *aq_ctx;
+     SDL_mutex *aq_lock;
+     SAQContext *aq_ctx;
+     SDL_mutex *vpq_lock, *apq_lock;
+     SAQContext *vpq_ctx, *apq_ctx;
+     AVPacket pkt_temp;
+     // SDL_mutex *decode_lock; // FIXME: remove SA's dependency of SDL.
      AVFormatContext *avfmt_ctx_ptr;
      AVCodecContext *a_codec_ctx, *v_codec_ctx;
      AVStream *audio_st, *video_st;
      AVCodec *a_codec, *v_codec;
      int v_stream, a_stream;
      int v_width, v_height;
-     AVFrame *v_frame_t;
+     // AVFrame *v_frame_t;
      int audio_eof, video_eof;
      double video_clock;
 } SAContext;
@@ -48,7 +53,7 @@ SAVideoPacket *SA_get_vp(SAContext *);
 
 void SA_seek(SAContext *, double, double);
 
-int _SA_decode_packet(SAContext *);
+int _SA_read_packet(SAContext *);
 
 int _SA_get_buffer(AVCodecContext *, AVFrame *);
 
