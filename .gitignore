@@ -1,14 +1,4 @@
 *.o
 *~
-*.mkv
-*.mp4
-tutorial0[1-8].c
-test
+saplayer
 debug
-check.c
-check
-log.txt
-dbg
-tuto08
-guren-ragan.divx
-lili-chouchou.avi
