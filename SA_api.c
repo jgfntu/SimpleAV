@@ -141,13 +141,19 @@ void SA_close(SAContext *sa_ctx)
      if(sa_ctx->vpq_ctx != NULL)
      {
           while((ptr = SAQ_pop(sa_ctx->vpq_ctx)) != NULL)
+          {
                av_free_packet((AVPacket *)ptr);
+               av_free(ptr);
+          }
           free(sa_ctx->vpq_ctx);
      }
      if(sa_ctx->apq_ctx != NULL)
      {
           while((ptr = SAQ_pop(sa_ctx->apq_ctx)) != NULL)
+          {
                av_free_packet((AVPacket *)ptr);
+               av_free(ptr);
+          }
           free(sa_ctx->apq_ctx);
      }
      if(sa_ctx->aq_ctx != NULL)
