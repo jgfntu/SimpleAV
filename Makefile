@@ -1,5 +1,7 @@
+LIBAV_FLAGS = `pkg-config --static --libs libavcodec libavformat libswscale`
+
 saplayer: saplayer.o SAQueue.o SA_api.o
-	gcc -o saplayer saplayer.o SAQueue.o SA_api.o `pkg-config --static --libs libavcodec libavformat libswscale` -lSDL 
+	gcc -o saplayer saplayer.o SAQueue.o SA_api.o $(LIBAV_FLAGS) -lSDL 
 
 saplayer.o: saplayer.c SA_api.h
 	gcc -O3 -c saplayer.c
@@ -11,7 +13,7 @@ SAQueue.o: SAQueue.c SAQueue.h
 	gcc -O3 -c SAQueue.c
 
 debug: saplayer_g.o SAQueue_g.o SA_api_g.o
-	gcc -g -Wall -o debug saplayer_g.o SAQueue_g.o SA_api_g.o `pkg-config --static --libs libavcodec libavformat libswscale` -lSDL 
+	gcc -g -Wall -o debug saplayer_g.o SAQueue_g.o SA_api_g.o $(LIBAV_FLAGS) -lSDL
 
 saplayer_g.o: saplayer.c SA_api.h
 	gcc -g -Wall -o saplayer_g.o -c saplayer.c
@@ -24,10 +26,3 @@ SAQueue_g.o: SAQueue.c SAQueue.h
 
 clean:
 	rm *.o
-
-# check and tuto08 are only for debugging.
-check: check.c
-	gcc check.c -o check
-
-tuto08: tutorial08.c
-	gcc tutorial08.c -o tuto08 `pkg-config --static --libs libavcodec libavformat libswscale` -lSDL 

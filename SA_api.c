@@ -18,9 +18,6 @@ int SA_init(void)
 
 SAContext *SA_open(char *filename)
 {
-     // DEBUG
-     printf("-1: stuck here?\n");
-
      int v_stream = -1, a_stream = -1, i;
      AVFormatContext *avfmt_ctx_ptr = NULL;
      AVCodecContext *v_codec_ctx = NULL, *a_codec_ctx = NULL;
@@ -34,9 +31,6 @@ SAContext *SA_open(char *filename)
      ctx_p->avfmt_ctx_ptr = NULL;
      ctx_p->audio_eof = ctx_p->video_eof = FALSE;
      
-     // DEBUG
-     printf("0: stuck here?\n");
-
      /* init the queue for storing decoder's output */
      ctx_p->filename = filename;
      ctx_p->vpq_ctx = SAQ_init();
@@ -45,9 +39,6 @@ SAContext *SA_open(char *filename)
      if(ctx_p->vpq_ctx == NULL || ctx_p->apq_ctx == NULL || ctx_p->aq_ctx == NULL)
           goto OPEN_FAIL;
 
-     // DEBUG
-     printf("1: stuck here?\n");
-
      /* opening the file */
      if(av_open_input_file(&avfmt_ctx_ptr, filename, NULL, 0, NULL) != 0)
           goto OPEN_FAIL;
@@ -55,7 +46,7 @@ SAContext *SA_open(char *filename)
      if(av_find_stream_info(avfmt_ctx_ptr) < 0)
           goto OPEN_FAIL;
 
-     /* FIXME: debug */
+     /* FIXME: do this for debugging. */
      dump_format(avfmt_ctx_ptr, 0, filename, 0);
 
      /* getting the video stream */
@@ -77,9 +68,6 @@ SAContext *SA_open(char *filename)
      ctx_p->v_codec_ctx = v_codec_ctx = avfmt_ctx_ptr->streams[v_stream]->codec;
      ctx_p->a_codec_ctx = a_codec_ctx = avfmt_ctx_ptr->streams[a_stream]->codec;
      
-     // DEBUG
-     printf("2: stuck here?\n");
-
      /* set our userdata for calculating PTS */
      v_codec_ctx->get_buffer = _SA_get_buffer;
      v_codec_ctx->release_buffer = _SA_release_buffer;
@@ -100,9 +88,6 @@ SAContext *SA_open(char *filename)
           goto OPEN_FAIL;
      }
 
-     // DEBUG
-     printf("3: stuck here?\n");
-
      /* set audio_st and video_st */
      ctx_p->audio_st = avfmt_ctx_ptr->streams[a_stream];
      ctx_p->video_st = avfmt_ctx_ptr->streams[v_stream];
@@ -114,29 +99,6 @@ SAContext *SA_open(char *filename)
         avcodec_open(a_codec_ctx, a_codec) < 0)
           goto OPEN_FAIL;
      
-     // DEBUG
-     // printf("4: stuck here?\n");
-     
-     /* getting the codec */
-     /*
-     ctx_p->v_codec = v_codec = avcodec_find_decoder(v_codec_ctx->codec_id);
-     ctx_p->a_codec = a_codec = avcodec_find_decoder(a_codec_ctx->codec_id);
-     if(v_codec == NULL || a_codec == NULL)
-     {
-          fprintf(stderr, "Unsupported codec!\n");
-          goto OPEN_FAIL;
-     }
-     */
-     // DEBUG
-     // printf("got stuck opening codecs??\n");
-     /*
-     if(avcodec_open(v_codec_ctx, v_codec) < 0 ||
-        avcodec_open(a_codec_ctx, a_codec) < 0)
-          goto OPEN_FAIL;
-     */
-     // DEBUG
-     // printf("or not?\n");
-
      /* setting other useful variables */
      ctx_p->v_width = ctx_p->v_codec_ctx->width;
      ctx_p->v_height = ctx_p->v_codec_ctx->height;
@@ -146,10 +108,7 @@ SAContext *SA_open(char *filename)
      ctx_p->vpq_lock = SDL_CreateMutex();
      ctx_p->apq_lock = SDL_CreateMutex();
      ctx_p->aq_lock = SDL_CreateMutex();
-     ctx_p->packet_lock = SDL_CreateMutex();// DEBUG
-
-     // DEBUG
-     printf("5: stuck here?\n");
+     ctx_p->packet_lock = SDL_CreateMutex();
 
      /* evenything is ok. return the context. */
      return ctx_p;
@@ -207,7 +166,7 @@ void SA_close(SAContext *sa_ctx)
           SDL_DestroyMutex(sa_ctx->apq_lock);
      if(sa_ctx->aq_lock != NULL)
           SDL_DestroyMutex(sa_ctx->aq_lock);
-     if(sa_ctx->packet_lock != NULL) // DEBUG
+     if(sa_ctx->packet_lock != NULL)
           SDL_DestroyMutex(sa_ctx->packet_lock);
      
      free(sa_ctx);
@@ -216,7 +175,6 @@ void SA_close(SAContext *sa_ctx)
 
 int _SA_read_packet(SAContext *sa_ctx)
 {
-     // DEBUG
      SDL_mutexP(sa_ctx->packet_lock);
      
      AVPacket *packet = (AVPacket *)av_malloc(sizeof(AVPacket));
@@ -225,9 +183,7 @@ int _SA_read_packet(SAContext *sa_ctx)
      {
           av_free(packet);
           
-          // DEBUG
           SDL_mutexV(sa_ctx->packet_lock);
-     
           return -1;
      }
 
@@ -235,10 +191,9 @@ int _SA_read_packet(SAContext *sa_ctx)
      {
           fprintf(stderr, "av_dup_packet failed?\n");
           av_free_packet(packet);
+          av_free(packet);
           
-          // DEBUG
           SDL_mutexV(sa_ctx->packet_lock);
-     
           return -1;
      }
      
@@ -254,9 +209,7 @@ int _SA_read_packet(SAContext *sa_ctx)
           SDL_mutexV(sa_ctx->apq_lock);
      }
 
-     // DEBUG
      SDL_mutexV(sa_ctx->packet_lock);
-     
      return 0;
 }
 
@@ -289,10 +242,11 @@ SAVideoPacket *SA_get_vp(SAContext *sa_ctx)
           
           if(avcodec_decode_video2(sa_ctx->v_codec_ctx, v_frame,
                                    &frame_finished, packet) <= 0)
-               printf("Wow!\n"); // FIXME: handle this in another way.
+               printf("Error decoding video?\n"); // FIXME: handle this in another way.
 
           last_dts = packet->dts;
           av_free_packet(packet);
+          av_free(packet);
           packet = NULL;
      }
           
@@ -376,6 +330,7 @@ NEXT_FRAME:
                     fprintf(stderr, "failed on getting a SAAudioPacket buffer\n");
 
                av_free_packet(packet);
+               av_free(packet);
                SDL_mutexV(sa_ctx->aq_lock);
                return NULL;
           }
@@ -406,6 +361,7 @@ NEXT_FRAME:
      }
 
      av_free_packet(packet);
+     av_free(packet);
      
      ret = SAQ_pop(sa_ctx->aq_ctx);
      if(ret == NULL)
@@ -430,7 +386,7 @@ void SA_seek(SAContext *sa_ctx, double seek_to, double delta)
      int64_t seek_target = av_rescale_q(pos, AV_TIME_BASE_Q,
                                         sa_ctx->video_st->time_base);
      if(av_seek_frame(sa_ctx->avfmt_ctx_ptr, stream_index, seek_target, seek_flags) < 0)
-          fprintf(stderr, "Error while seeking!\n"); // FIXME: handle this!
+          fprintf(stderr, "Seeking failed!\n"); // FIXME: handle this!
      else
      {
           void *ptr;
@@ -451,12 +407,12 @@ void SA_seek(SAContext *sa_ctx, double seek_to, double delta)
           avcodec_flush_buffers(sa_ctx->v_codec_ctx);
 
           sa_ctx->video_clock = seek_to;
-          
-          SDL_mutexV(sa_ctx->aq_lock);
-          SDL_mutexV(sa_ctx->vpq_lock);
-          SDL_mutexV(sa_ctx->apq_lock);
      }
 
+     SDL_mutexV(sa_ctx->aq_lock);
+     SDL_mutexV(sa_ctx->vpq_lock);
+     SDL_mutexV(sa_ctx->apq_lock);
+     
      return;
 }
 
