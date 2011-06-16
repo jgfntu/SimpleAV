@@ -27,6 +27,9 @@ typedef struct SAContext {
      SAQContext *aq_ctx;
      SDL_mutex *vpq_lock, *apq_lock;
      SAQContext *vpq_ctx, *apq_ctx;
+
+     SDL_mutex *packet_lock;
+     
      AVPacket pkt_temp;
      AVFormatContext *avfmt_ctx_ptr;
      AVCodecContext *a_codec_ctx, *v_codec_ctx;

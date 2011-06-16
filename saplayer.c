@@ -96,6 +96,8 @@ int main(int argc, char *argv[])
 
      SA_init();
      sa_ctx = SA_open(argv[1]);
+     // DEBUG
+     printf("done?\n");
      if(sa_ctx == NULL)
      {
           printf("failed opening %s...\n", argv[1]);
@@ -105,6 +107,10 @@ int main(int argc, char *argv[])
      SDL_Surface *screen = SDL_SetVideoMode(sa_ctx->v_width, sa_ctx->v_height, 32, 0);
      SDL_Overlay *overlay = SDL_CreateYUVOverlay(sa_ctx->v_width, sa_ctx->v_height,
                                                  SDL_YV12_OVERLAY, screen);
+     // DEBUG
+     printf("opened...\n");
+     if(screen == NULL)
+          printf("what?\n");
 
      int w = sa_ctx->v_width, h = sa_ctx->v_height;
      img_convert_ctx = sws_getContext(w, h, sa_ctx->v_codec_ctx->pix_fmt,
