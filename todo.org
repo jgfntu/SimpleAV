@@ -8,7 +8,7 @@
    need to maintain video/audio clock.
 ** TODO seperate the core code with the SDL stuff.
    so we need to use something to replace SDL_mutex.
-** TODO include libav source code? write a 'configure'? use cmake?
+** TODO include libav source code? write a 'configure'?
 
 * future
 ** TODO add support for manually downmixing.
