@@ -1,6 +1,8 @@
 #+STARTUP: showall
 
 * on going
+** TODO LICENSE!!!!!!!!!!!!!!!!!!!!
+   MIT? BSD? Apache?
 ** TODO redesign SimpleAV to make it easier to use.
    as simple as sf::sfeMovie.
    let SimpleAV do the dirty syncing job.
