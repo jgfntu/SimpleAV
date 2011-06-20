@@ -34,7 +34,7 @@ SAContext *SASDL_open(char *filename)
           sasdl_ctx->last_pts = 0.0f;
           sa_ctx->lib_data = sasdl_ctx;
      }
-/*
+/*     
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
      Uint32 rmask = 0xff000000;
      Uint32 gmask = 0x00ff0000;
@@ -46,7 +46,20 @@ SAContext *SASDL_open(char *filename)
      Uint32 bmask = 0x00ff0000;
      Uint32 amask = 0xff000000;
 #endif
-*/
+     sasdl_ctx->surface = SDL_CreateRGBSurface(SDL_SWSURFACE, width, height, 32,
+                                               rmask, gmask, bmask, amask);
+     if(sasdl_ctx->surface == NULL) {
+          SASDL_close(sa_ctx);
+          fprintf(stderr, "CreateRGBSurface failed: %s\n", SDL_GetError());
+          return NULL;
+     } else
+     {
+          sasdl_ctx->overlay = SDL_CreateYUVOverlay(width, height,
+                                                    SDL_YV12_OVERLAY,
+                                                    sasdl_ctx->surface);
+
+     }
+*/     
      int width = SASDL_get_width(sa_ctx);
      int height = SASDL_get_height(sa_ctx);
      struct SwsContext *swsctx = sws_getContext(width, height, sa_ctx->v_codec_ctx->pix_fmt,
@@ -154,9 +167,16 @@ int SASDL_draw(SAContext *sa_ctx, SDL_Surface *surface)
 
      AVFrame *frame = vp->frame_ptr;
      int h = SASDL_get_height(sa_ctx);
+     
+     SDL_LockSurface(surface);
+     AVPicture pict;
+     pict.data[0] = surface->pixels; 
+     pict.linesize[0] = surface->pitch;
      sws_scale(sasdl_ctx->swsctx, (const uint8_t * const *)(frame->data),
-               frame->linesize, 0, h, (uint8_t* const*)&(surface->pixels),
-               (const int *)&(surface->pitch)); // FIXME: pitch...???
+               frame->linesize, 0, h, pict.data, pict.linesize);
+     SDL_UnlockSurface(surface);
+     
+     
      sasdl_ctx->last_pts = vp->pts;
      sasdl_ctx->vp = NULL;
      av_free(vp->frame_ptr);
