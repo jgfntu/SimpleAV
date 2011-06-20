@@ -1,5 +1,5 @@
-#ifndef __SAQUEUE__H__DEFINED__
-#define __SAQUEUE__H__DEFINED__
+#ifndef __SIMPLEAV_CORE_UTIL_SAQUEUE_H_DEFINED__
+#define __SIMPLEAV_CORE_UTIL_SAQUEUE_H_DEFINED__
 
 typedef struct _SAQNode {
      void *data;

@@ -19,6 +19,7 @@
    is that necessary?
 
 * to make it perfect
+** TODO get current video clock, get duration...
 ** TODO rewrite img_convert to convert every frame onto SDL_Surface. :SA_api:
 ** TODO reset img_convert_ctx when 'video size' changes.             :test.c:
 ** TODO improve SA_init, make its return value meaningful.           :SA_api:

@@ -17,23 +17,29 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/include
   )
 
-file(GLOB SIMPLEAV_SOURCES ${PROJECT_SOURCE_DIR}/src/*.c)
-file(GLOB SIMPLEAV_HEADERS ${PROJECT_SOURCE_DIR}/include/*.h)
+file(GLOB SIMPLEAV_SOURCES
+  ${PROJECT_SOURCE_DIR}/src/SimpleAV/SDL/*.c
+  ${PROJECT_SOURCE_DIR}/src/SimpleAV/core/*.c
+  ${PROJECT_SOURCE_DIR}/src/SimpleAV/core/util/*.c)
+file(GLOB SIMPLEAV_HEADERS
+  ${PROJECT_SOURCE_DIR}/include/SimpleAV/SDL/*.h
+  ${PROJECT_SOURCE_DIR}/include/SimpleAV/core/*.h
+  ${PROJECT_SOURCE_DIR}/include/SimpleAV/core/util/*.h)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR})
 set(CMAKE_C_FLAGS "-g -Wall -O3")
 
 add_executable(
-  saplayer
-  ${PROJECT_SOURCE_DIR}/saplayer.c
+  player2
+  ${PROJECT_SOURCE_DIR}/player2.c
   ${SIMPLEAV_SOURCES}
   ${SIMPLEAV_HEADERS}
   )
 target_link_libraries(
-  saplayer
+  player2
   ${AvCodec_LIBRARIES} ${AvFormat_LIBRARIES}
   ${AvUtil_LIBRARIES} ${AvDevice_LIBRARIES}
   ${Swscale_LIBRARIES}
   ${SDL_LIBRARY}
-  m z avcodec avformat avdevice avutil swscale
+  m z pthread avcodec avformat avdevice avutil swscale
   )
