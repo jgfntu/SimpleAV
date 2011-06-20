@@ -1,24 +1,28 @@
 SimpleAV is (somewhat) usable now. Your comments are always welcome.
-But it is still under heavy development, so the API may change a lot in the future.
 
-Current version is 0.0.4, based on libav v0.6.2.
-Seeking is well supported. But the users still have to do the syncing job manually.
+Current version is 0.0.5b, based on libav v0.6.2.
+Syncing is almost perfectly supported -- no need to do that yourself anymore!
 
-The next version will be 0.0.5, featuring:
- * a much simpler and better API;
- * lower CPU and memory resource occupying; (*maybe*)
- * a revised program structure which will make it easier to bind SimpleAV onto other libraries, like SFML(yes, just like sfe::Movie).
+The next version will be 0.0.5 or 0.1.0, featuring:
+ * better Audio-Video syncing;
+ * a more complete API;
+ * a license. maybe MIT, BSD, or LGPL.
+
+With SimpleAV, you could write a multimedia player that supports seeking and pausing in 99 lines.
+Read "player2.c" if you are interested. :-P
 --------------------------------------------------------------------------------
 COMPILATION:
 
-Currently, SimpleAV uses cmake to compile the sample code, "saplayer.c".
+Currently, SimpleAV uses cmake to compile the sample code, "player2.c".
 You could compile it with the following steps:
 
     1. cd build/
     2. cmake ..
     3. make
 
-Please pay attention that SimpleAV itself doesn't include libav/ffmpeg. You need to download and install it yourself.
-SimpleAV works well under libav v0.6.2. If you want to try other versions of libav, take your own risk; your feedback is always welcome(thanks!).
+"saplayer.c" is the old sample code: as you see, the newer one is much shorter!
+
+And, please pay attention that SimpleAV itself doesn't include libav/ffmpeg. You need to download and install it yourself.
+SimpleAV works well under libav v0.6.2. If you want to try other versions of libav, take your own risk; and your feedback is always welcome(thanks!).
 
 SimpleAV will not generate libs like libSimpleAV.a and install them for you until it is enough mature and stable. So, be patient, and stay tuned!

@@ -1,7 +1,6 @@
-#include <stdio.h>
-
-#include <SDL/SDL.h>
 #include "SimpleAV/SDL/api.h"
+#include <SDL/SDL.h>
+#include <stdio.h>
 
 int main(int argc, char *argv[])
 {
@@ -20,21 +19,24 @@ int main(int argc, char *argv[])
           SDL_Quit();
           return 1;
      }
-     
-     SDL_Surface *screen = SDL_SetVideoMode(
-          SASDL_get_width(sa_ctx), SASDL_get_height(sa_ctx),
-          32, SDL_SWSURFACE);
-
-     SASDL_play(sa_ctx);
 
      double delta = 0.0f;
      SDL_Event event;
+     int width = SASDL_get_width(sa_ctx);
+     int height = SASDL_get_height(sa_ctx);
+     SDL_Rect full_screen = {
+          .x = 0, .y = 0,
+          .w = width, .h = height
+     };
+     
+     SDL_Surface *screen = SDL_SetVideoMode(width, height, 32, SDL_SWSURFACE);
      int (*get_event)(SDL_Event *) = SDL_PollEvent;
+     
+     SASDL_play(sa_ctx);
      while(SASDL_draw(sa_ctx, screen) == 0) // FIXME: add precise EOF detect.
      {
           SDL_Flip(screen);
 
-          // while(SDL_PollEvent(&event))
           while(get_event(&event))
                if(event.type == SDL_QUIT)
                {
@@ -57,9 +59,6 @@ int main(int argc, char *argv[])
                          delta = 60.0;
                          break;
                     case SDLK_SPACE:
-                         // DEBUG
-                         printf("pause!\n");
-                         
                          if(SASDL_get_video_status(sa_ctx) == SASDL_is_playing)
                          {
                               SASDL_pause(sa_ctx);
@@ -72,10 +71,9 @@ int main(int argc, char *argv[])
                               goto NEXT_LOOP;
                          }
                     case SDLK_s:
-                         // DEBUG
-                         printf("stop!\n");
-                         
                          SASDL_stop(sa_ctx);
+                         SDL_FillRect(screen, &full_screen, 0x000000);
+                         SDL_Flip(screen);
                          get_event = SDL_WaitEvent;
                          continue;
                     default:

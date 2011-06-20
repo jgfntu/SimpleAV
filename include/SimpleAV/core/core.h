@@ -27,7 +27,7 @@ typedef struct SAContext {
 
      SAMutex aq_lock_real, vpq_lock_real, apq_lock_real, packet_lock_real;
      
-     SAMutex *aq_lock; // FIXME: remove SA's dependency of SDL.
+     SAMutex *aq_lock;
      SAQContext *aq_ctx;
      SAMutex *vpq_lock, *apq_lock;
      SAQContext *vpq_ctx, *apq_ctx;

@@ -3,13 +3,7 @@
 * on going
 ** TODO LICENSE!!!!!!!!!!!!!!!!!!!!
    MIT? BSD? Apache?
-** TODO redesign SimpleAV to make it easier to use.
-   as simple as sf::sfeMovie.
-   let SimpleAV do the dirty syncing job.
-** TODO sync video to audio, or sync both of them to external clock.
-   need to maintain video/audio clock.
-** TODO seperate the core code with the SDL stuff.
-   so we need to use something to replace SDL_mutex.
+** TODO sync audio to external clock.
 ** TODO include libav source code? write a 'configure'?
 
 * essential bugs
@@ -23,11 +17,9 @@
    is that necessary?
 
 * to make it perfect
-** TODO get current video clock, get duration...
-** TODO rewrite img_convert to convert every frame onto SDL_Surface. :SA_api:
+** TODO get video duration...
 ** TODO reset img_convert_ctx when 'video size' changes.             :test.c:
 ** TODO improve SA_init, make its return value meaningful.           :SA_api:
 
 * not clear yet
 ** TODO get clear what AUDIO_S16SYS is.                              :test.c:
-** TODO figure out what caused the high CPU occupation.

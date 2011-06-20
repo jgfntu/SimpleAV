@@ -34,32 +34,7 @@ SAContext *SASDL_open(char *filename)
           sasdl_ctx->last_pts = 0.0f;
           sa_ctx->lib_data = sasdl_ctx;
      }
-/*     
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-     Uint32 rmask = 0xff000000;
-     Uint32 gmask = 0x00ff0000;
-     Uint32 bmask = 0x0000ff00;
-     Uint32 amask = 0x000000ff;
-#else
-     Uint32 rmask = 0x000000ff;
-     Uint32 gmask = 0x0000ff00;
-     Uint32 bmask = 0x00ff0000;
-     Uint32 amask = 0xff000000;
-#endif
-     sasdl_ctx->surface = SDL_CreateRGBSurface(SDL_SWSURFACE, width, height, 32,
-                                               rmask, gmask, bmask, amask);
-     if(sasdl_ctx->surface == NULL) {
-          SASDL_close(sa_ctx);
-          fprintf(stderr, "CreateRGBSurface failed: %s\n", SDL_GetError());
-          return NULL;
-     } else
-     {
-          sasdl_ctx->overlay = SDL_CreateYUVOverlay(width, height,
-                                                    SDL_YV12_OVERLAY,
-                                                    sasdl_ctx->surface);
-
-     }
-*/     
+     
      int width = SASDL_get_width(sa_ctx);
      int height = SASDL_get_height(sa_ctx);
      struct SwsContext *swsctx = sws_getContext(width, height, sa_ctx->v_codec_ctx->pix_fmt,
@@ -84,7 +59,7 @@ SAContext *SASDL_open(char *filename)
 
      if(SDL_OpenAudio(&wanted_spec, NULL) < 0)
      {
-          printf("SDL_OpenAudio: %s\n", SDL_GetError());
+          fprintf(stderr, "SDL_OpenAudio: %s\n", SDL_GetError());
           SASDL_close(sa_ctx);
           return NULL;
      }
@@ -112,9 +87,6 @@ void SASDL_play(SAContext *sa_ctx)
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
      sasdl_ctx->status = SASDL_is_playing;
      sasdl_ctx->start_time = SA_get_clock() - sasdl_ctx->video_start_at;
-     // DEBUG
-     printf("play: clock = %f, video starts at: %f\n", SA_get_clock(), sasdl_ctx->video_start_at);
-     
      sasdl_ctx->last_pts = sasdl_ctx->video_start_at;
      SDL_PauseAudio(0);
 }
@@ -124,9 +96,6 @@ void SASDL_pause(SAContext *sa_ctx)
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
      sasdl_ctx->video_start_at = SASDL_get_video_clock(sa_ctx);
      sasdl_ctx->status = SASDL_is_paused;
-     // DEBUG
-     printf("pause: current video clock = %f\n", sasdl_ctx->video_start_at);
-     
      SDL_PauseAudio(1);
      
      SAVideoPacket *vp = sasdl_ctx->vp;
@@ -196,9 +165,6 @@ int SASDL_draw(SAContext *sa_ctx, SDL_Surface *surface)
      if(vp == NULL)
           if((sasdl_ctx->vp = vp = SA_get_vp(sa_ctx)) == NULL)
                return -1;
-
-     // DEBUG
-     // printf("pts: %f, clock: %f\n", vp->pts, SASDL_get_video_clock(sa_ctx));
 
      // FIXME: this would fail on long-lasting frames.
      //        only one SDL_Surface is not enough.
