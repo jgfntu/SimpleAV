@@ -12,6 +12,10 @@
    so we need to use something to replace SDL_mutex.
 ** TODO include libav source code? write a 'configure'?
 
+* essential bugs
+** TODO add long-lasting frame support.
+   how long could that be?
+
 * future
 ** TODO add support for manually downmixing.
    add an parameter to SA_open().

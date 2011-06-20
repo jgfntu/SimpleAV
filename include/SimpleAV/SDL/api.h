@@ -54,4 +54,6 @@ int SASDL_get_height(SAContext *);
 
 double SASDL_get_video_clock(SAContext *);
 
+enum SASDLVideoStatus SASDL_get_video_status(SAContext *);
+
 #endif

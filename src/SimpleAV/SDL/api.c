@@ -96,6 +96,8 @@ int SASDL_close(SAContext *sa_ctx)
 {
      if(sa_ctx == NULL)
           return -1;
+
+     SDL_PauseAudio(1);
      
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
      if(sasdl_ctx != NULL)
@@ -110,6 +112,9 @@ void SASDL_play(SAContext *sa_ctx)
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
      sasdl_ctx->status = SASDL_is_playing;
      sasdl_ctx->start_time = SA_get_clock() - sasdl_ctx->video_start_at;
+     // DEBUG
+     printf("play: clock = %f, video starts at: %f\n", SA_get_clock(), sasdl_ctx->video_start_at);
+     
      sasdl_ctx->last_pts = sasdl_ctx->video_start_at;
      SDL_PauseAudio(0);
 }
@@ -117,24 +122,49 @@ void SASDL_play(SAContext *sa_ctx)
 void SASDL_pause(SAContext *sa_ctx)
 {
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
-     sasdl_ctx->status = SASDL_is_paused;
      sasdl_ctx->video_start_at = SASDL_get_video_clock(sa_ctx);
+     sasdl_ctx->status = SASDL_is_paused;
+     // DEBUG
+     printf("pause: current video clock = %f\n", sasdl_ctx->video_start_at);
+     
      SDL_PauseAudio(1);
+     
+     SAVideoPacket *vp = sasdl_ctx->vp;
+     if(vp != NULL)
+     {
+          av_free(vp->frame_ptr);
+          free(vp);
+          sasdl_ctx->vp = NULL;
+     }
 }
 
 int SASDL_stop(SAContext *sa_ctx)
 {
+     int ret;
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
+     SAVideoPacket *vp = sasdl_ctx->vp;
+     if(vp != NULL)
+     {
+          av_free(vp->frame_ptr);
+          free(vp);
+          sasdl_ctx->vp = NULL;
+     }
+     
      sasdl_ctx->status = SASDL_is_stopped;
+     sasdl_ctx->video_start_at = 0.0f;
+     ret = SASDL_seek(sa_ctx, 0.0f);
      SDL_PauseAudio(1);
-     return SASDL_seek(sa_ctx, 0.0f);
+     return ret;
 }
 
 int SASDL_seek(SAContext *sa_ctx, double seek_dst)
 {
+     if(seek_dst < 0)
+          seek_dst = 0;
+     
+     int ret;
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
      SAVideoPacket *vp = sasdl_ctx->vp;
-     sasdl_ctx->video_start_at = seek_dst;
      if(vp != NULL)
      {
           av_free(vp->frame_ptr);
@@ -142,45 +172,55 @@ int SASDL_seek(SAContext *sa_ctx, double seek_dst)
           sasdl_ctx->vp = NULL;
      }
 
-     SDL_PauseAudio(1);
-     return SA_seek(sa_ctx, seek_dst,
-                    seek_dst - sasdl_ctx->last_pts);
+     ret = SA_seek(sa_ctx, seek_dst,
+                   seek_dst - sasdl_ctx->last_pts);
+     
+     vp = sasdl_ctx->vp = SA_get_vp(sa_ctx);
+     if(vp == NULL)
+          return -1;
+
+     sasdl_ctx->last_pts = vp->pts;
+     sasdl_ctx->video_start_at = vp->pts;
+     if(sasdl_ctx->status == SASDL_is_playing)
+          sasdl_ctx->start_time = SA_get_clock() - vp->pts;
+     
+     // SDL_PauseAudio(0);
+     return ret;
 }
 
 int SASDL_draw(SAContext *sa_ctx, SDL_Surface *surface)
 {
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
      SAVideoPacket *vp = sasdl_ctx->vp;
-     sasdl_ctx->vp = NULL;
-     
-     while(vp == NULL || vp->pts < SASDL_get_video_clock(sa_ctx))
-     {
-          if(vp != NULL)
-          {
-               av_free(vp->frame_ptr);
-               free(vp);
-          }
-          
-          if((vp = SA_get_vp(sa_ctx)) == NULL)
-               return -1;
-     }
 
-     AVFrame *frame = vp->frame_ptr;
-     int h = SASDL_get_height(sa_ctx);
+     if(vp == NULL)
+          if((sasdl_ctx->vp = vp = SA_get_vp(sa_ctx)) == NULL)
+               return -1;
+
+     // DEBUG
+     // printf("pts: %f, clock: %f\n", vp->pts, SASDL_get_video_clock(sa_ctx));
+
+     // FIXME: this would fail on long-lasting frames.
+     //        only one SDL_Surface is not enough.
+     if(vp->pts <= SASDL_get_video_clock(sa_ctx))
+     {
+          AVFrame *frame = vp->frame_ptr;
+          int h = SASDL_get_height(sa_ctx);
      
-     SDL_LockSurface(surface);
-     AVPicture pict;
-     pict.data[0] = surface->pixels; 
-     pict.linesize[0] = surface->pitch;
-     sws_scale(sasdl_ctx->swsctx, (const uint8_t * const *)(frame->data),
-               frame->linesize, 0, h, pict.data, pict.linesize);
-     SDL_UnlockSurface(surface);
+          SDL_LockSurface(surface);
+          AVPicture pict;
+          pict.data[0] = surface->pixels; 
+          pict.linesize[0] = surface->pitch;
+          sws_scale(sasdl_ctx->swsctx, (const uint8_t * const *)(frame->data),
+                    frame->linesize, 0, h, pict.data, pict.linesize);
+          SDL_UnlockSurface(surface);
+
+          sasdl_ctx->last_pts = vp->pts;
+          sasdl_ctx->vp = NULL;
+          av_free(vp->frame_ptr);
+          free(vp);
+     }
      
-     
-     sasdl_ctx->last_pts = vp->pts;
-     sasdl_ctx->vp = NULL;
-     av_free(vp->frame_ptr);
-     free(vp);
      return 0;
 }
 
@@ -192,12 +232,12 @@ int SASDL_delay(SAContext *sa_ctx)
           if((vp = SA_get_vp(sa_ctx)) == NULL)
                return -1;
      sasdl_ctx->vp = vp;
-     
-     double w_time = SASDL_get_video_clock(sa_ctx) - vp->pts;
+
+     double w_time = vp->pts - SASDL_get_video_clock(sa_ctx);
      while(w_time >= 0.005) // FIXME: I *hate* magic numbers.
      {
           SDL_Delay(w_time * 1000);
-          w_time = SASDL_get_video_clock(sa_ctx) - vp->pts;
+          w_time = vp->pts - SASDL_get_video_clock(sa_ctx);
      }
      
      sasdl_ctx->last_pts = vp->pts;
@@ -267,4 +307,10 @@ void SASDL_audio_callback(void *data, uint8_t *stream, int len)
                audio_buf_index = 0;
           }
      }
+}
+
+enum SASDLVideoStatus SASDL_get_video_status(SAContext *sa_ctx)
+{
+     SASDLContext *sasdl_ctx = sa_ctx->lib_data;
+     return sasdl_ctx->status;
 }
