@@ -1,12 +1,12 @@
 SimpleAV is (somewhat) usable now. Your comments are always welcome.
+It is released under LGPL v3.
 
-Current version is 0.0.5b, based on libav v0.6.2.
+Current version is 0.0.5b2, based on libav v0.6.2.
 Syncing is almost perfectly supported -- no need to do that yourself anymore!
 
 The next version will be 0.0.5 or 0.1.0, featuring:
  * better Audio-Video syncing;
  * a more complete API;
- * a license. maybe MIT, BSD, or LGPL.
 
 With SimpleAV, you could write a multimedia player that supports seeking and pausing in 99 lines.
 Read "player2.c" if you are interested. :-P
