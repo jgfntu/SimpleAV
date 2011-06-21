@@ -1,10 +1,9 @@
 #+STARTUP: showall
 
 * on going
-** TODO LICENSE!!!!!!!!!!!!!!!!!!!!
-   MIT? BSD? Apache?
-** TODO sync audio to external clock.
-** TODO include libav source code? write a 'configure'?
+** TODO add more useful functions in SDL/api.[ch].
+   for example, video duration...
+** TODO include libav source code? write a 'configure.in'?
 
 * essential bugs
 ** TODO add long-lasting frame support.
@@ -15,11 +14,3 @@
    add an parameter to SA_open().
 ** TODO subtitle support
    is that necessary?
-
-* to make it perfect
-** TODO get video duration...
-** TODO reset img_convert_ctx when 'video size' changes.             :test.c:
-** TODO improve SA_init, make its return value meaningful.           :SA_api:
-
-* not clear yet
-** TODO get clear what AUDIO_S16SYS is.                              :test.c:

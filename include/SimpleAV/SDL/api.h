@@ -36,6 +36,9 @@ typedef struct {
      SAVideoPacket *vp;
 } SASDLContext;
 
+// FIXME: I need a ... better threshold.
+#define SASDL_AUDIO_ADJUST_THRESHOLD   (1.00f / 24)
+
 /*
  * init, open/close
  */

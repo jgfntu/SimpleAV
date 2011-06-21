@@ -180,6 +180,9 @@ int SASDL_seek(SAContext *sa_ctx, double seek_dst)
 int SASDL_draw(SAContext *sa_ctx, SDL_Surface *surface)
 {
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
+     if(sasdl_ctx->status != SASDL_is_playing)
+          return 0;
+     
      SAVideoPacket *vp = sasdl_ctx->vp;
 
      if(vp == NULL)
@@ -213,6 +216,9 @@ int SASDL_draw(SAContext *sa_ctx, SDL_Surface *surface)
 int SASDL_delay(SAContext *sa_ctx)
 {
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
+     if(sasdl_ctx->status != SASDL_is_playing)
+          return 0;
+     
      SAVideoPacket *vp = sasdl_ctx->vp;
      if(vp == NULL)
           if((vp = SA_get_vp(sa_ctx)) == NULL)
@@ -260,9 +266,13 @@ void SASDL_audio_callback(void *data, uint8_t *stream, int len)
      static SAAudioPacket *sa_ap = NULL;
      static unsigned int audio_buf_index = 0;
      unsigned int size_to_copy = 0;
-
+     double size_per_sec = 2 * sa_ctx->a_codec_ctx->channels *
+                           sa_ctx->a_codec_ctx->sample_rate;
      if(sa_ctx->audio_eof)
+     {
+          SDL_PauseAudio(1);
           return;
+     }
 
      while(len > 0)
      {
@@ -275,6 +285,38 @@ void SASDL_audio_callback(void *data, uint8_t *stream, int len)
                memset(stream, 0, len);
                SDL_PauseAudio(1);
                return; // FIXME: *MAYBE* eof encountered. what if... ?
+          }
+
+          // DEBUG
+          // double t = sa_ap->pts - SASDL_get_video_clock(sa_ctx);
+          // if(t < 0) t = -t;
+          // printf("%f\n", t);
+          
+          double delay = sa_ap->pts - SASDL_get_video_clock(sa_ctx);
+          if(-SASDL_AUDIO_ADJUST_THRESHOLD <= delay &&
+             delay <= SASDL_AUDIO_ADJUST_THRESHOLD)
+               delay = 0.0f;
+          int delay_size = delay * size_per_sec;
+          if(delay_size > 0) // 'wait' for the external clock
+          {
+               int silent_size = len < delay_size ? len : delay_size;
+               memset(stream, 0, silent_size);
+               len -= silent_size;
+               stream += silent_size;
+               continue;
+          } else if(delay_size < 0) // shrink the buffer
+          {
+               audio_buf_index -= delay_size;
+               
+               // copy the code directly to prevent infinite looping
+               if(audio_buf_index >= sa_ap->len)
+               {
+                    av_free(sa_ap->abuffer);
+                    free(sa_ap);
+                    sa_ap = NULL;
+                    audio_buf_index = 0;
+                    continue;
+               }
           }
           
           size_to_copy = len < (sa_ap->len - audio_buf_index) ?

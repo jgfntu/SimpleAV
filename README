@@ -1,28 +1,38 @@
-SimpleAV is (somewhat) usable now. Your comments are always welcome.
+SimpleAV makes you able to write a nice video player in 99 lines.
 It is released under LGPL v3.
 
-Current version is 0.0.5b2, based on libav v0.6.2.
+Current version is 0.0.5, based on libav v0.6.2.
 Syncing is almost perfectly supported -- no need to do that yourself anymore!
 
-The next version will be 0.0.5 or 0.1.0, featuring:
- * better Audio-Video syncing;
+The next version will features:
  * a more complete API;
+ * (maybe) SFML support.
 
-With SimpleAV, you could write a multimedia player that supports seeking and pausing in 99 lines.
-Read "player2.c" if you are interested. :-P
+Start with "saplayer.c" if you are interested. :-P
+--------------------------------------------------------------------------------
+"saplayer-old.c" is the old (longer) sample code.
+(To compile it, you need to modify its headers and "CMakeLists.txt".)
+
+And, please pay attention that SimpleAV itself doesn't include libav/ffmpeg.
+You need to download and install it yourself.
+
+SimpleAV works well under libav v0.6.2.
+If you want to try other versions of libav, take your own risk...
+Your feedback is always welcome(thanks!).
+
+I have never tested it under M$ Windows... Any volunteers?
+
+SimpleAV will not generate libs like libSimpleAV.a and install them for you,
+until it is enough mature and stable. So, be patient, and stay tuned!
 --------------------------------------------------------------------------------
 COMPILATION:
 
-Currently, SimpleAV uses cmake to compile the sample code, "player2.c".
-You could compile it with the following steps:
+Currently, SimpleAV uses cmake to compile the sample code, "saplayer.c".
+You could compile (and install, if you like) it with the following steps:
 
     1. cd build/
     2. cmake ..
     3. make
+   (4. cd .. ; sudo cp saplayer /usr/local/bin)
 
-"saplayer.c" is the old sample code: as you see, the newer one is much shorter!
-
-And, please pay attention that SimpleAV itself doesn't include libav/ffmpeg. You need to download and install it yourself.
-SimpleAV works well under libav v0.6.2. If you want to try other versions of libav, take your own risk; and your feedback is always welcome(thanks!).
-
-SimpleAV will not generate libs like libSimpleAV.a and install them for you until it is enough mature and stable. So, be patient, and stay tuned!
+Then have fun!

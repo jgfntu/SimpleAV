@@ -30,13 +30,13 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR})
 set(CMAKE_C_FLAGS "-g -Wall -O3")
 
 add_executable(
-  player2
-  ${PROJECT_SOURCE_DIR}/player2.c
+  saplayer
+  ${PROJECT_SOURCE_DIR}/saplayer.c
   ${SIMPLEAV_SOURCES}
   ${SIMPLEAV_HEADERS}
   )
 target_link_libraries(
-  player2
+  saplayer
   ${AvCodec_LIBRARIES} ${AvFormat_LIBRARIES}
   ${AvUtil_LIBRARIES} ${AvDevice_LIBRARIES}
   ${Swscale_LIBRARIES}

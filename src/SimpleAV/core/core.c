@@ -129,6 +129,7 @@ SAContext *SA_open(char *filename)
      ctx_p->v_width = ctx_p->v_codec_ctx->width;
      ctx_p->v_height = ctx_p->v_codec_ctx->height;
      ctx_p->video_clock = 0.0f;
+     ctx_p->a_clock = 0.0f;
      ctx_p->lib_data = NULL;
 
      /* create the mutex needed to lock _SA_decode_packet(). */
@@ -353,6 +354,9 @@ SAAudioPacket *SA_get_ap(SAContext *sa_ctx)
           printf("out: 1\n");
           return ret;
      }
+
+     int n = 2 * sa_ctx->a_codec_ctx->channels;
+     double size_per_sec = (n * sa_ctx->a_codec_ctx->sample_rate);
      
      AVPacket *packet = NULL, *pkt_temp = &(sa_ctx->pkt_temp);
      SAMutex_lock(sa_ctx->aq_lock); // to make sure SA_seek() frees ap *completely*.
@@ -372,6 +376,10 @@ NEXT_FRAME:
                     return NULL;
                }
      }
+
+     double a_clock = -1.0;
+     if(packet->pts != AV_NOPTS_VALUE)
+          a_clock = av_q2d(sa_ctx->audio_st->time_base) * packet->pts;
 
      pkt_temp->data = packet->data;
      pkt_temp->size = packet->size;
@@ -418,8 +426,17 @@ NEXT_FRAME:
                continue;
           }
 
+          if(a_clock >= 0.0f)
+               sa_ctx->a_clock = a_clock;
+
           ret->len = data_size;
+          ret->pts = sa_ctx->a_clock;
           SAQ_push(sa_ctx->aq_ctx, ret);
+
+          double delta_t = data_size / size_per_sec;
+          sa_ctx->a_clock += delta_t;
+          if(a_clock >= 0.0f)
+               a_clock += delta_t;
      }
 
      av_free_packet(packet);
@@ -472,6 +489,7 @@ int SA_seek(SAContext *sa_ctx, double seek_to, double delta)
           avcodec_flush_buffers(sa_ctx->v_codec_ctx);
 
           sa_ctx->video_clock = seek_to;
+          sa_ctx->a_clock = seek_to;
      }
 
      SAMutex_unlock(sa_ctx->aq_lock);
