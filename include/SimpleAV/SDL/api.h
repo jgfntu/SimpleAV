@@ -34,6 +34,8 @@ typedef struct {
      double last_pts;
      struct SwsContext *swsctx;
      SAVideoPacket *vp;
+     SAAudioPacket *sa_ap;
+     unsigned int audio_buf_index;
 } SASDLContext;
 
 // FIXME: I need a ... better threshold.

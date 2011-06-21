@@ -154,11 +154,20 @@ int SASDL_seek(SAContext *sa_ctx, double seek_dst)
      int ret;
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
      SAVideoPacket *vp = sasdl_ctx->vp;
+     SAAudioPacket *ap = sasdl_ctx->sa_ap;
      if(vp != NULL)
      {
           av_free(vp->frame_ptr);
           free(vp);
           sasdl_ctx->vp = NULL;
+     }
+
+     if(ap != NULL)
+     {
+          av_free(ap->abuffer);
+          free(ap);
+          sasdl_ctx->sa_ap = NULL;
+          sasdl_ctx->audio_buf_index = 0;
      }
 
      ret = SA_seek(sa_ctx, seek_dst,
@@ -263,8 +272,9 @@ double SASDL_get_video_clock(SAContext *sa_ctx)
 void SASDL_audio_callback(void *data, uint8_t *stream, int len)
 {
      SAContext *sa_ctx = data;
-     static SAAudioPacket *sa_ap = NULL;
-     static unsigned int audio_buf_index = 0;
+     SASDLContext *sasdl_ctx = sa_ctx->lib_data;
+     SAAudioPacket *sa_ap = sasdl_ctx->sa_ap;
+     unsigned int audio_buf_index = sasdl_ctx->audio_buf_index;
      unsigned int size_to_copy = 0;
      double size_per_sec = 2 * sa_ctx->a_codec_ctx->channels *
                            sa_ctx->a_codec_ctx->sample_rate;
@@ -277,13 +287,15 @@ void SASDL_audio_callback(void *data, uint8_t *stream, int len)
      while(len > 0)
      {
           if(sa_ap == NULL)
-               sa_ap = SA_get_ap(sa_ctx);
+               sasdl_ctx->sa_ap = sa_ap = SA_get_ap(sa_ctx);
 
           if(sa_ap == NULL)
           {
                sa_ctx->audio_eof = 1;
                memset(stream, 0, len);
                SDL_PauseAudio(1);
+               sasdl_ctx->sa_ap = sa_ap;
+               sasdl_ctx->audio_buf_index = audio_buf_index;
                return; // FIXME: *MAYBE* eof encountered. what if... ?
           }
 
@@ -335,6 +347,9 @@ void SASDL_audio_callback(void *data, uint8_t *stream, int len)
                audio_buf_index = 0;
           }
      }
+
+     sasdl_ctx->sa_ap = sa_ap;
+     sasdl_ctx->audio_buf_index = audio_buf_index;
 }
 
 enum SASDLVideoStatus SASDL_get_video_status(SAContext *sa_ctx)
