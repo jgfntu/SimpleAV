@@ -35,6 +35,7 @@
 
 int SA_init(void)
 {
+     // av_log_set_flags(???); // FIXME: inplement this
      av_register_all();
      return 0; // FIXME
 }
@@ -63,18 +64,17 @@ SAContext *SA_open(char *filename)
           goto OPEN_FAIL;
 
      /* opening the file */
-     if(av_open_input_file(&avfmt_ctx_ptr, filename, NULL, 0, NULL) != 0)
+     if(avformat_open_input(&avfmt_ctx_ptr, filename, NULL, NULL) != 0)
           goto OPEN_FAIL;
      ctx_p->avfmt_ctx_ptr = avfmt_ctx_ptr;
      if(av_find_stream_info(avfmt_ctx_ptr) < 0)
           goto OPEN_FAIL;
 
      /* FIXME: do this for debugging. */
-     dump_format(avfmt_ctx_ptr, 0, filename, 0);
-
+     av_dump_format(avfmt_ctx_ptr, 0, filename, 0);
      /* getting the video stream */
      for(i = 0; i < avfmt_ctx_ptr->nb_streams; i++)
-          if(avfmt_ctx_ptr->streams[i]->codec->codec_type == CODEC_TYPE_VIDEO)
+          if(avfmt_ctx_ptr->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
                break;
      if(i == avfmt_ctx_ptr->nb_streams)
           goto OPEN_FAIL;
@@ -82,7 +82,7 @@ SAContext *SA_open(char *filename)
 
      /* getting the audio stream */
      for(i = 0; i < avfmt_ctx_ptr->nb_streams; i++)
-          if(avfmt_ctx_ptr->streams[i]->codec->codec_type == CODEC_TYPE_AUDIO)
+          if(avfmt_ctx_ptr->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
                break;
      if(i == avfmt_ctx_ptr->nb_streams)
           goto OPEN_FAIL;

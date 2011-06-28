@@ -1,29 +1,27 @@
-SimpleAV makes you able to write a nice video player in 99 lines.
+SimpleAV makes you able to write a nice video player in less than 100 lines.
 It is released under LGPL v3.
 
-Current version is 0.0.5, based on libav v0.6.2.
+Current version is 0.0.5, based on libav v0.7.
 Syncing is almost perfectly supported -- no need to do that yourself anymore!
 
 The next version will features:
+ * an improved API logic;
  * a more complete API;
  * (maybe) SFML support.
 
 Start with "saplayer.c" if you are interested. :-P
 --------------------------------------------------------------------------------
 "saplayer-old.c" is the old (longer) sample code.
-(To compile it, you need to modify its headers and "CMakeLists.txt".)
+To compile it, you may need to do some hack.
 
-And, please pay attention that SimpleAV itself doesn't include libav/ffmpeg.
+And, please pay attention that SimpleAV itself doesn't include libav.
 You need to download and install it yourself.
 
-SimpleAV works well under libav v0.6.2.
-If you want to try other versions of libav, take your own risk...
-Your feedback is always welcome(thanks!).
+SimpleAV works well under libav v0.7.
+BTW, I have never tested it under M$ Windows... Any volunteers?
 
-I have never tested it under M$ Windows... Any volunteers?
-
-SimpleAV will not generate libs like libSimpleAV.a and install them for you,
-until it is enough mature and stable. So, be patient, and stay tuned!
+SimpleAV will not generate compiled libs like libSimpleAV.a, until it is enouth
+mature and stable. So, be patient, and stay tuned!
 --------------------------------------------------------------------------------
 COMPILATION:
 
