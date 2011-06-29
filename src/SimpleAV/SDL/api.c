@@ -123,6 +123,8 @@ int SASDL_close(SAContext *sa_ctx)
 void SASDL_play(SAContext *sa_ctx)
 {
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
+     if(sasdl_ctx->status == SASDL_is_playing)
+          return;
      sasdl_ctx->status = SASDL_is_playing;
      sasdl_ctx->start_time = SA_get_clock() - sasdl_ctx->video_start_at;
      sasdl_ctx->last_pts = sasdl_ctx->video_start_at;
@@ -132,6 +134,8 @@ void SASDL_play(SAContext *sa_ctx)
 void SASDL_pause(SAContext *sa_ctx)
 {
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
+     if(sasdl_ctx->status != SASDL_is_playing)
+          return;
      sasdl_ctx->video_start_at = SASDL_get_video_clock(sa_ctx);
      sasdl_ctx->status = SASDL_is_paused;
      SDL_PauseAudio(1);
@@ -141,6 +145,8 @@ int SASDL_stop(SAContext *sa_ctx)
 {
      int ret;
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
+     if(sasdl_ctx->status == SASDL_is_stopped)
+          return 0;
      sasdl_ctx->status = SASDL_is_stopped;
      sasdl_ctx->video_start_at = 0.0f;
      
@@ -178,7 +184,7 @@ int SASDL_seek(SAContext *sa_ctx, double seek_dst)
 
      SDL_mutexP(sasdl_ctx->ap_lock);
      SAAudioPacket *ap = sasdl_ctx->ap;
-     if(ap != NULL) // FIXME: what if ap is still in use?
+     if(ap != NULL)
      {
           SA_free_ap(ap);
           sasdl_ctx->ap = NULL;
@@ -188,11 +194,11 @@ int SASDL_seek(SAContext *sa_ctx, double seek_dst)
      int ret = SA_seek(sa_ctx, seek_dst,
                        seek_dst - sasdl_ctx->last_pts);
      
-     vp_cur = sasdl_ctx->vp_cur = SA_get_vp(sa_ctx);
+     sasdl_ctx->vp_cur = vp_cur = SA_get_vp(sa_ctx);
      if(vp_cur == NULL)
      {
           SDL_mutexV(sasdl_ctx->ap_lock);
-          return -1; /* EOF */
+          return -1; /* FIXME: EOF? seeking error? */
      }
      vp_next = sasdl_ctx->vp_next = SA_get_vp(sa_ctx);
 
@@ -201,6 +207,8 @@ int SASDL_seek(SAContext *sa_ctx, double seek_dst)
      sasdl_ctx->video_start_at = vp_cur->pts;
      if(sasdl_ctx->status == SASDL_is_playing)
           sasdl_ctx->start_time = SA_get_clock() - vp_cur->pts;
+     else if(sasdl_ctx->status == SASDL_is_stopped)
+          sasdl_ctx->status = SASDL_is_paused;
 
      // FIXME:
      /*
@@ -230,6 +238,10 @@ int SASDL_seek(SAContext *sa_ctx, double seek_dst)
  */
 int SASDL_draw(SAContext *sa_ctx, SDL_Surface *surface)
 {
+     SDL_Rect full_screen = {
+          .x = 0, .y = 0,
+          .w = SASDL_get_width(sa_ctx), .h = SASDL_get_height(sa_ctx)
+     };
      SASDLContext *sasdl_ctx = sa_ctx->lib_data;
      SAVideoPacket *vp_cur = sasdl_ctx->vp_cur;
      SAVideoPacket *vp_next = sasdl_ctx->vp_next;
@@ -245,12 +257,16 @@ int SASDL_draw(SAContext *sa_ctx, SDL_Surface *surface)
 
      if(sasdl_ctx->status != SASDL_is_playing)
      {
-          _SASDL_avframe_to_surface(sa_ctx, vp_cur->frame_ptr, surface);
+          if(sasdl_ctx->status == SASDL_is_paused) {
+               _SASDL_avframe_to_surface(sa_ctx, vp_cur->frame_ptr, surface);
+          } else
+               SDL_FillRect(surface, &full_screen, 0x000000);
           
           /* don't free vp_cur now:
            * "SASDL_draw() always draw the correct frame" */
           return 0;
      }
+          
 
      /* "vp_cur.pts <= current clock < vp_next.pts" */
      while(vp_next != NULL && vp_next->pts <= SASDL_get_video_clock(sa_ctx))
@@ -324,6 +340,11 @@ int SASDL_get_width(SAContext *sa_ctx)
 int SASDL_get_height(SAContext *sa_ctx)
 {
      return SA_get_height(sa_ctx);
+}
+
+double SASDL_get_video_duration(SAContext *sa_ctx)
+{
+     return SA_get_duration(sa_ctx);
 }
 
 double SASDL_get_video_clock(SAContext *sa_ctx)

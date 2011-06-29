@@ -5,8 +5,10 @@ Current version is 0.0.5, based on libav v0.7.
 Syncing is almost perfectly supported -- no need to do that yourself anymore!
 
 The next version will features:
- * an improved API logic;
- * a more complete API;
+ * precise seeking
+ * correct down-mixing
+ * (maybe) multi-file support
+ * (maybe) user's custom audio callback
  * (maybe) SFML support.
 
 Start with "saplayer.c" if you are interested. :-P

@@ -94,6 +94,8 @@ int SA_get_width(SAContext *);
 
 int SA_get_height(SAContext *);
 
+double SA_get_duration(SAContext *);
+
 double SA_get_clock(void);
 
 #endif

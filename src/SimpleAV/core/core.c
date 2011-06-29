@@ -480,7 +480,8 @@ int SA_seek(SAContext *sa_ctx, double seek_to, double delta)
                                         sa_ctx->video_st->time_base);
      if(av_seek_frame(sa_ctx->avfmt_ctx_ptr, stream_index, seek_target, seek_flags) < 0)
      {
-          fprintf(stderr, "Seeking failed!\n");
+          // FIXME: failed? EOF?
+          // fprintf(stderr, "Seeking failed!\n");
           ret = -1;
      } else
      {
@@ -534,6 +535,11 @@ int SA_get_width(SAContext *sa_ctx)
 int SA_get_height(SAContext *sa_ctx)
 {
      return sa_ctx->v_height;
+}
+
+double SA_get_duration(SAContext *sa_ctx)
+{
+     return (double)(sa_ctx->avfmt_ctx_ptr->duration) / (double)(AV_TIME_BASE);
 }
 
 double SA_get_clock(void)
