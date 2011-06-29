@@ -115,7 +115,7 @@ SAContext *SA_open(char *filename)
      ctx_p->audio_st = avfmt_ctx_ptr->streams[a_stream];
      ctx_p->video_st = avfmt_ctx_ptr->streams[v_stream];
      
-     /* FIXME: downmix, but seems like a dirty hack. */
+     /* FIXME: downmix. a BAD dirty hack. */
      ctx_p->a_codec_ctx->request_channels = FFMIN(2, ctx_p->a_codec_ctx->channels);
 
      if(avcodec_open(v_codec_ctx, v_codec) < 0 ||
@@ -216,10 +216,7 @@ void SA_close(SAContext *sa_ctx)
      if(sa_ctx->aq_ctx != NULL)
      {
           while((ptr = SAQ_pop(sa_ctx->aq_ctx)) != NULL)
-          {
-               av_free(((SAAudioPacket *)ptr)->abuffer);
-               free(ptr);
-          }
+               SA_free_ap(ptr);
           free(sa_ctx->aq_ctx);
      }
 
@@ -453,6 +450,22 @@ NEXT_FRAME:
      return ret;
 }
 
+void SA_free_ap(SAAudioPacket *ap)
+{
+     if(ap == NULL)
+          return;
+     av_free(ap->abuffer);
+     free(ap);
+}
+
+void SA_free_vp(SAVideoPacket *vp)
+{
+     if(vp == NULL)
+          return;
+     av_free(vp->frame_ptr);
+     free(vp);
+}
+
 int SA_seek(SAContext *sa_ctx, double seek_to, double delta)
 {
      int ret = 0;
@@ -474,10 +487,7 @@ int SA_seek(SAContext *sa_ctx, double seek_to, double delta)
           void *ptr;
 
           while((ptr = SAQ_pop(sa_ctx->aq_ctx)) != NULL)
-          {
-               av_free(((SAAudioPacket *)ptr)->abuffer);
-               free(ptr);
-          }
+               SA_free_ap(ptr);
           
           while((ptr = SAQ_pop(sa_ctx->vpq_ctx)) != NULL)
                av_free_packet(ptr);

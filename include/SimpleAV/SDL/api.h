@@ -21,6 +21,7 @@
 #ifndef __SIMPLEAV_SDL_API_H__
 #define __SIMPLEAV_SDL_API_H__
 
+#include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 #include "SimpleAV/core/core.h"
 
@@ -33,12 +34,16 @@ typedef struct {
      double video_start_at, start_time;
      double last_pts;
      struct SwsContext *swsctx;
-     SAVideoPacket *vp;
-     SAAudioPacket *sa_ap;
+     SAVideoPacket *vp_cur, *vp_next;
+     
+     SAAudioPacket *ap; // FIXME: should ap be locked?
+     /* or, will SDL_PauseAudio(1) kill the audio callback function if it is executing? */
+     SDL_mutex *ap_lock;
+     
      unsigned int audio_buf_index;
 } SASDLContext;
 
-// FIXME: I need a ... better threshold.
+// FIXME: I need ... a better threshold.
 #define SASDL_AUDIO_ADJUST_THRESHOLD   (1.00f / 24)
 
 /*
@@ -68,7 +73,9 @@ int SASDL_draw(SAContext *, SDL_Surface *);
 
 int SASDL_delay(SAContext *);
 
-void SASDL_audio_callback(void *, uint8_t *, int);
+double SASDL_get_delay_time(SAContext *); // if you don't like SASDL_delay()... ;-P
+
+void SASDL_audio_callback(void *, uint8_t *, int); // FIXME: this should be private
 
 /*
  * others
@@ -80,5 +87,11 @@ int SASDL_get_height(SAContext *);
 double SASDL_get_video_clock(SAContext *);
 
 enum SASDLVideoStatus SASDL_get_video_status(SAContext *);
+
+/*
+ * "private" functions
+ * FIXME: maybe I should not write it here?
+ */ 
+void _SASDL_avframe_to_surface(SAContext *, AVFrame *, SDL_Surface *);
 
 #endif

@@ -78,6 +78,10 @@ SAAudioPacket *SA_get_ap(SAContext *);
 
 SAVideoPacket *SA_get_vp(SAContext *);
 
+void SA_free_ap(SAAudioPacket *);
+
+void SA_free_vp(SAVideoPacket *);
+
 int SA_seek(SAContext *, double, double);
 
 int _SA_read_packet(SAContext *);
