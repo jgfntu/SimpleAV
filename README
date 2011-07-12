@@ -11,6 +11,14 @@ Start with "saplayer-old.c" if you are interested. :-P
 --------------------------------------------------------------------------------
 COMPILATION:
 
-    simple run 'make' under this folder.
+    1. make
+    2. sudo make install
 
 Then have fun!
+--------------------------------------------------------------------------------
+USING SIMPLEAV:
+
+To use SimpleAV in your own program, just add '-lSimpleAV' when calling gcc.
+Like this:
+
+    $ gcc saplayer-old.c -lSimpleAV -lSDL `pkg-config --libs libavcodec libavformat libavutil libswscale`
