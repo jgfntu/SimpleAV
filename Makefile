@@ -1,4 +1,4 @@
-libav_link = -pthread -L/usr/local/lib -lavformat -lavcodec -ldl -lasound -lz -lswscale -lavutil -lm
+libav_link = `pkg-config --libs libavcodec libavformat libavutil libswscale`
 sdl_link = -lSDL
 
 all: libSimpleAV.a saplayer-old

@@ -1,38 +1,24 @@
-SimpleAV makes you able to write a nice video player in less than 100 lines.
+SimpleAV aims on simplifing you job on decoding videos.
 It is released under LGPL v3.
 
-Current version is 0.0.5, based on libav v0.7.
-Syncing is almost perfectly supported -- no need to do that yourself anymore!
+Current version is 0.1.0b, based on libav v0.7.
 
-The next version will features:
+The next version may features:
  * precise seeking
  * correct down-mixing
- * (maybe) multi-file support
- * (maybe) user's custom audio callback
- * (maybe) SFML support.
 
-Start with "saplayer.c" if you are interested. :-P
---------------------------------------------------------------------------------
-"saplayer-old.c" is the old (longer) sample code.
-To compile it, you may need to do some hack.
-
-And, please pay attention that SimpleAV itself doesn't include libav.
-You need to download and install it yourself.
-
-SimpleAV works well under libav v0.7.
-BTW, I have never tested it under M$ Windows... Any volunteers?
-
-SimpleAV will not generate compiled libs like libSimpleAV.a, until it is enouth
-mature and stable. So, be patient, and stay tuned!
+Start with "saplayer-old.c" if you are interested. :-P
 --------------------------------------------------------------------------------
 COMPILATION:
 
-Currently, SimpleAV uses cmake to compile the sample code, "saplayer.c".
-You could compile (and install, if you like) it with the following steps:
-
-    1. cd build/
-    2. cmake ..
-    3. make
-   (4. cd .. ; sudo cp saplayer /usr/local/bin)
+    1. make
+    2. sudo make install
 
 Then have fun!
+--------------------------------------------------------------------------------
+USING SIMPLEAV:
+
+To use SimpleAV in your own program, just add '-lSimpleAV' when calling gcc.
+Like this:
+
+    $ gcc saplayer-old.c -lSimpleAV -lSDL `pkg-config --libs libavcodec libavformat libavutil libswscale`
