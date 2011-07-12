@@ -18,8 +18,8 @@
  * along with SimpleAV. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SIMPLEAV_CORE_UTIL_SAQUEUE_H_DEFINED__
-#define __SIMPLEAV_CORE_UTIL_SAQUEUE_H_DEFINED__
+#ifndef __SIMPLEAV_SAQUEUE_H_DEFINED__
+#define __SIMPLEAV_SAQUEUE_H_DEFINED__
 
 typedef struct _SAQNode {
      void *data;

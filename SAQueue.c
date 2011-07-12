@@ -18,7 +18,7 @@
  * along with SimpleAV. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SimpleAV/core/util/SAQueue.h"
+#include "SAQueue.h"
 
 #include <stdlib.h>
 

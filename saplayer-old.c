@@ -18,7 +18,7 @@
  * along with SimpleAV. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SA_api.h"
+#include "SimpleAV.h"
 
 #include <libswscale/swscale.h>
 #include <stdio.h>
@@ -27,11 +27,16 @@
 // FIXME: unportable?
 #include <unistd.h>
 
+// unquote this line to use SDL_Surface. Sometimes it will enhance the performance.
+//#define SAPLAYER_OLD_USE_SDL_SURFACE 1
+
 #define SDL_AUDIO_BUFFER_SIZE 512
 
 SAContext *sa_ctx = NULL;
 struct SwsContext *img_convert_ctx;
 
+
+#ifndef SAPLAYER_OLD_USE_SDL_SURFACE
 void show_frame(AVFrame *frame, SDL_Overlay *overlay)
 {
      int w = sa_ctx->v_width, h = sa_ctx->v_height;
@@ -52,12 +57,29 @@ void show_frame(AVFrame *frame, SDL_Overlay *overlay)
      SDL_UnlockYUVOverlay(overlay);
 	
      SDL_Rect rect;
+
      rect.x = 0;
      rect.y = 0;
      rect.w = w;
      rect.h = h;
      SDL_DisplayYUVOverlay(overlay, &rect);
 }
+#else
+void avframe_to_sdlsurface(AVFrame *frame, SDL_Surface *surface)
+{
+     int h = sa_ctx->v_height;
+     SDL_LockSurface(surface);
+     
+     AVPicture pict;
+     pict.data[0] = surface->pixels; 
+     pict.linesize[0] = surface->pitch;
+     
+     sws_scale(img_convert_ctx, (const uint8_t * const *)(frame->data),
+               frame->linesize, 0, h, pict.data, pict.linesize);
+     
+     SDL_UnlockSurface(surface);
+}
+#endif
 
 void audio_callback(void *data, uint8_t *stream, int len)
 {
@@ -123,13 +145,23 @@ int main(int argc, char *argv[])
      }
 
      SDL_Surface *screen = SDL_SetVideoMode(sa_ctx->v_width, sa_ctx->v_height, 32, 0);
+#ifndef SAPLAYER_OLD_USE_SDL_SURFACE
      SDL_Overlay *overlay = SDL_CreateYUVOverlay(sa_ctx->v_width, sa_ctx->v_height,
                                                  SDL_YV12_OVERLAY, screen);
+#endif
 
      int w = sa_ctx->v_width, h = sa_ctx->v_height;
+     
+#ifndef SAPLAYER_OLD_USE_SDL_SURFACE
      img_convert_ctx = sws_getContext(w, h, sa_ctx->v_codec_ctx->pix_fmt,
                                       w, h, PIX_FMT_YUV420P, SWS_BICUBIC,
                                       NULL, NULL, NULL);
+#else
+     img_convert_ctx = sws_getContext(w, h, sa_ctx->v_codec_ctx->pix_fmt,
+                                      w, h, PIX_FMT_RGB32, SWS_BICUBIC,
+                                      NULL, NULL, NULL);
+#endif
+     
      if(img_convert_ctx == NULL)
      {
           printf("Failed to get struct Swscontext!\n");
@@ -184,8 +216,13 @@ int main(int argc, char *argv[])
                usleep(w_clock * 1000 + 1);
                w_clock = vp->pts - (get_clock() - start_time);
           }
-
+          
+#ifndef SAPLAYER_OLD_USE_SDL_SURFACE
           show_frame(vp->frame_ptr, overlay);
+#else
+          avframe_to_sdlsurface(vp->frame_ptr, screen);
+          SDL_Flip(screen);
+#endif
 
      SKIP_VIDEO:
 
@@ -235,7 +272,13 @@ int main(int argc, char *argv[])
                          goto SKIP_VIDEO; // FIXME: eof?
                     }
 
+#ifndef SAPLAYER_OLD_USE_SDL_SURFACE
                     show_frame(vp->frame_ptr, overlay);
+#else
+                    avframe_to_sdlsurface(vp->frame_ptr, screen);
+                    SDL_Flip(screen);
+#endif
+                    
                     start_time = get_clock() - vp->pts;
 
                IGNORE_KEY:;
@@ -252,7 +295,9 @@ PROGRAM_QUIT:
 
      SA_close(sa_ctx);
      SDL_CloseAudio();
+#ifndef SAPLAYER_OLD_USE_SDL_SURFACE
      SDL_FreeYUVOverlay(overlay);
+#endif
      SDL_Quit();
      
      return 0;
