@@ -271,6 +271,7 @@ int SASDL_draw(SAContext *sa_ctx, SDL_Surface *surface)
      /* "vp_cur.pts <= current clock < vp_next.pts" */
      while(vp_next != NULL && vp_next->pts <= SASDL_get_video_clock(sa_ctx))
      {
+          SA_free_vp(vp_cur);
           vp_cur = vp_next;
           vp_next = SA_get_vp(sa_ctx);
           if(vp_cur == NULL)
