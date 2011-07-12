@@ -18,11 +18,11 @@
  * along with SimpleAV. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SIMPLEAV_CORE_H__DEFINED__
-#define __SIMPLEAV_CORE_H__DEFINED__
+#ifndef __SIMPLEAV_H__DEFINED__
+#define __SIMPLEAV_H__DEFINED__
 
-#include "SimpleAV/core/util/SAMutex.h"
-#include "SimpleAV/core/util/SAQueue.h"
+#include "SAMutex.h"
+#include "SAQueue.h"
 
 #include <SDL/SDL.h>
 #include <libavcodec/avcodec.h>

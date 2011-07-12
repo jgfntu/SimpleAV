@@ -18,7 +18,7 @@
  * along with SimpleAV. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SimpleAV/core/util/SAMutex.h"
+#include "SAMutex.h"
 
 /*
  * A simple cross-platform(sorry, *BSD...) mutex.
