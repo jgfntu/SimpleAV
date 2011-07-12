@@ -18,7 +18,7 @@
  * along with SimpleAV. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SA_api.h"
+#include "SimpleAV/core/core.h"
 
 #include <libswscale/swscale.h>
 #include <stdio.h>

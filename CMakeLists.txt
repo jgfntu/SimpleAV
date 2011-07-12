@@ -18,13 +18,16 @@ include_directories(
   )
 
 file(GLOB SIMPLEAV_SOURCES
-  ${PROJECT_SOURCE_DIR}/src/SimpleAV/SDL/*.c
   ${PROJECT_SOURCE_DIR}/src/SimpleAV/core/*.c
   ${PROJECT_SOURCE_DIR}/src/SimpleAV/core/util/*.c)
 file(GLOB SIMPLEAV_HEADERS
-  ${PROJECT_SOURCE_DIR}/include/SimpleAV/SDL/*.h
   ${PROJECT_SOURCE_DIR}/include/SimpleAV/core/*.h
   ${PROJECT_SOURCE_DIR}/include/SimpleAV/core/util/*.h)
+
+file(GLOB SIMPLEAV_SDL_SOURCES
+  ${PROJECT_SOURCE_DIR}/src/SimpleAV/SDL/*.c)
+file(GLOB SIMPLEAV_SDL_HEADERS
+  ${PROJECT_SOURCE_DIR}/include/SimpleAV/SDL/*.h)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR})
 set(CMAKE_C_FLAGS "-g -Wall -O3")
@@ -34,9 +37,26 @@ add_executable(
   ${PROJECT_SOURCE_DIR}/saplayer.c
   ${SIMPLEAV_SOURCES}
   ${SIMPLEAV_HEADERS}
+  ${SIMPLEAV_SDL_SOURCES}
+  ${SIMPLEAV_SDL_HEADERS}
   )
 target_link_libraries(
   saplayer
+  ${AvCodec_LIBRARIES} ${AvFormat_LIBRARIES}
+  ${AvUtil_LIBRARIES} ${AvDevice_LIBRARIES}
+  ${Swscale_LIBRARIES}
+  ${SDL_LIBRARY}
+  m z pthread avcodec avformat avdevice avutil swscale
+  )
+
+add_executable(
+  saplayer-old
+  ${PROJECT_SOURCE_DIR}/saplayer-old.c
+  ${SIMPLEAV_SOURCES}
+  ${SIMPLEAV_HEADERS}
+  )
+target_link_libraries(
+  saplayer-old
   ${AvCodec_LIBRARIES} ${AvFormat_LIBRARIES}
   ${AvUtil_LIBRARIES} ${AvDevice_LIBRARIES}
   ${Swscale_LIBRARIES}
