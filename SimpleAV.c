@@ -297,8 +297,15 @@ SAVideoPacket *SA_get_vp(SAContext *sa_ctx)
           }
 
           *(uint64_t *)(sa_ctx->v_codec_ctx->opaque) = packet->pts;
-          if(v_frame == NULL)
+          if(v_frame == NULL) {
                v_frame = avcodec_alloc_frame();
+               if(v_frame == NULL) {
+                    printf("avcodec_alloc_frame() failed!");
+                    av_free_packet(packet);
+                    av_free(packet);
+                    return NULL;
+               }
+          }
           
           if(avcodec_decode_video2(sa_ctx->v_codec_ctx, v_frame,
                                    &frame_finished, packet) <= 0)
