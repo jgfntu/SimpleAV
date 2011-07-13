@@ -1,5 +1,5 @@
 /*
- * core.h
+ * SimpleAV.h
  * Copyright (C) 2011 by Chenguang Wang(wecing)
  *
  * This file is part of SimpleAV.

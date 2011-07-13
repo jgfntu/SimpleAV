@@ -1,5 +1,5 @@
 /*
- * saplayer.c
+ * saplayer-old.c
  * Copyright (C) 2011 by Chenguang Wang(wecing)
  *
  * This file is part of SimpleAV.
