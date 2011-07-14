@@ -113,8 +113,7 @@ void audio_callback(void *data, uint8_t *stream, int len)
 
           if(audio_buf_index >= sa_ap->len)
           {
-               av_free(sa_ap->abuffer);
-               free(sa_ap);
+               SA_free_ap(sa_ap);
                sa_ap = NULL;
                audio_buf_index = 0;
           }
@@ -197,10 +196,7 @@ int main(int argc, char *argv[])
           while(vp == NULL || vp->pts <= get_clock() - start_time)
           {
                if(vp != NULL)
-               {
-                    av_free(vp->frame_ptr);
-                    free(vp);
-               }
+                    SA_free_vp(vp);
                
                vp = SA_get_vp(sa_ctx);
                if(vp == NULL)
@@ -260,8 +256,7 @@ int main(int argc, char *argv[])
 
                     if(vp != NULL)
                     {
-                         av_free(vp->frame_ptr);
-                         free(vp);
+                         SA_free_vp(vp);
                          vp = NULL;
                     }
 
@@ -286,10 +281,7 @@ int main(int argc, char *argv[])
      }
 
      if(vp != NULL)
-     {
-          av_free(vp->frame_ptr);
-          free(vp);
-     }
+          SA_free_vp(vp);
 
 PROGRAM_QUIT:
 
