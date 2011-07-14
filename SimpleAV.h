@@ -60,6 +60,8 @@ typedef struct SAContext {
      AVStream *audio_st, *video_st;
      AVCodec *a_codec, *v_codec;
      int v_stream, a_stream;
+
+     AVFrame *frame;
      
      int v_width, v_height;
      int audio_eof, video_eof;

@@ -132,6 +132,13 @@ SAContext *SA_open(char *filename)
      ctx_p->a_clock = 0.0f;
      ctx_p->lib_data = NULL;
 
+     /* for storing decoded frame. */
+     ctx_p->frame = avcodec_alloc_frame();
+     if(ctx_p->frame == NULL) {
+          fprintf(stderr, "could not alloc an empty AVFrame!\n");
+          goto OPEN_FAIL;
+     }
+
      /* create the mutex needed to lock _SA_decode_packet(). */
      int aq_lock_inited = FALSE, vpq_lock_inited = FALSE,
           apq_lock_inited = FALSE, packet_lock_inited = FALSE;
@@ -228,6 +235,9 @@ void SA_close(SAContext *sa_ctx)
           SAMutex_destroy(sa_ctx->aq_lock);
      if(sa_ctx->packet_lock != NULL)
           SAMutex_destroy(sa_ctx->packet_lock);
+
+     if(sa_ctx->frame != NULL)
+          av_free(sa_ctx->frame);
      
      free(sa_ctx);
      return;
@@ -278,7 +288,7 @@ SAVideoPacket *SA_get_vp(SAContext *sa_ctx)
      SAVideoPacket *ret;
      int frame_finished = 0;
      AVPacket *packet = NULL;
-     AVFrame *v_frame = NULL;
+     AVFrame *v_frame = sa_ctx->frame;
      uint64_t last_dts;
      while(!frame_finished)
      {
@@ -289,20 +299,17 @@ SAVideoPacket *SA_get_vp(SAContext *sa_ctx)
                SAMutex_unlock(sa_ctx->vpq_lock);
                if(packet == NULL)
                     if(_SA_read_packet(sa_ctx) < 0)
-                    {
-                         if(v_frame != NULL)
-                              av_free(v_frame);
                          return NULL;
-                    }
           }
 
+          // FIXME: is using this without calling avcodec_alloc_frame() ok?
           *(uint64_t *)(sa_ctx->v_codec_ctx->opaque) = packet->pts;
-          if(v_frame == NULL)
-               v_frame = avcodec_alloc_frame();
           
           if(avcodec_decode_video2(sa_ctx->v_codec_ctx, v_frame,
-                                   &frame_finished, packet) <= 0)
-               printf("Error decoding video?\n"); // FIXME: handle this in another way.
+                                   &frame_finished, packet) <= 0) {
+               // FIXME: handle this in another way.
+               fprintf(stderr, "Error while decoding video!\n");
+          }
 
           last_dts = packet->dts;
           av_free_packet(packet);
@@ -311,10 +318,8 @@ SAVideoPacket *SA_get_vp(SAContext *sa_ctx)
      }
           
      ret = malloc(sizeof(SAVideoPacket));
-     if(ret == NULL)
-     {
+     if(ret == NULL) {
           fprintf(stderr, "malloc failed\n");
-          av_free(v_frame);
           return NULL;
      }
      ret->frame_ptr = v_frame;
@@ -462,7 +467,6 @@ void SA_free_vp(SAVideoPacket *vp)
 {
      if(vp == NULL)
           return;
-     av_free(vp->frame_ptr);
      free(vp);
 }
 
