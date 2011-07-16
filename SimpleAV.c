@@ -51,6 +51,7 @@ SAContext *SA_open(char *filename)
      SAContext *ctx_p = (SAContext *) malloc(sizeof(SAContext));
      if(ctx_p == NULL)
           goto OPEN_FAIL;
+     memset(ctx_p, 0, sizeof(SAContext));
      ctx_p->vpq_ctx = ctx_p->apq_ctx = ctx_p->aq_ctx = NULL;
      ctx_p->avfmt_ctx_ptr = NULL;
      ctx_p->audio_eof = ctx_p->video_eof = FALSE;
@@ -130,7 +131,6 @@ SAContext *SA_open(char *filename)
      ctx_p->v_height = ctx_p->v_codec_ctx->height;
      ctx_p->video_clock = 0.0f;
      ctx_p->a_clock = 0.0f;
-     ctx_p->lib_data = NULL;
 
      /* for storing decoded frame. */
      ctx_p->frame = avcodec_alloc_frame();

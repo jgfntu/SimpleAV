@@ -66,8 +66,6 @@ typedef struct SAContext {
      int v_width, v_height;
      int audio_eof, video_eof;
      double video_clock, a_clock;
-
-     void *lib_data;
 } SAContext;
 
 int SA_init(void);

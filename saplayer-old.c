@@ -28,7 +28,7 @@
 #include <unistd.h>
 
 // unquote this line to use SDL_Surface. Sometimes it will enhance the performance.
-//#define SAPLAYER_OLD_USE_SDL_SURFACE 1
+// #define SAPLAYER_OLD_USE_SDL_SURFACE 1
 
 #define SDL_AUDIO_BUFFER_SIZE 512
 
