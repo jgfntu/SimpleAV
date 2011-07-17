@@ -18,8 +18,8 @@
  * along with SimpleAV. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SIMPLEAV_SAMUTEX_H_DEFINED__
-#define __SIMPLEAV_SAMUTEX_H_DEFINED__
+#ifndef __SIMPLEAV_SAMUTEX_H__DEFINED__
+#define __SIMPLEAV_SAMUTEX_H__DEFINED__
 
 /*
  * A simple cross-platform (sorry, *BSD...) mutex.
