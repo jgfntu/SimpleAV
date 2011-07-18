@@ -23,27 +23,15 @@ saplayer-old.o: SimpleAV.h saplayer-old.c
 	gcc -c saplayer-old.c $(libav_link) $(sdl_link)
 
 # installation
-install: install-lib install-header install-player
-
-install-lib:
+install:
 	cp libSimpleAV.a /usr/local/lib
-
-install-header:
 	cp *.h /usr/local/include
-
-install-player:
 	cp saplayer-old /usr/local/bin
 
 # un-installation
-uninstall: uninstall-lib uninstall-header uninstall-player
-
-uninstall-lib:
+uninstall:
 	rm /usr/local/lib/libSimpleAV.a
-
-uninstall-header:
 	rm /usr/local/include/SimpleAV.h /usr/local/include/SAQueue.h /usr/local/include/SAMutex.h
-
-uninstall-player:
 	rm /usr/local/bin/saplayer-old
 
 # clean up
