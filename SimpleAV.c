@@ -548,5 +548,5 @@ double SA_get_duration(SAContext *sa_ctx)
 
 double SA_get_clock(void)
 {
-     return av_gettime() / 1000000.0f;
+     return (double)av_gettime() / (double)1000000;
 }
