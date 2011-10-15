@@ -533,8 +533,3 @@ double SA_get_duration(SAContext *sa_ctx)
 {
      return (double)(sa_ctx->avfmt_ctx_ptr->duration) / (double)(AV_TIME_BASE);
 }
-
-double SA_get_clock(void)
-{
-     return (double)av_gettime() / (double)1000000;
-}

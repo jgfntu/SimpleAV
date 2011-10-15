@@ -108,11 +108,6 @@ void audio_callback(void *data, uint8_t *stream, int len)
      }
 }
 
-double get_clock(void)
-{
-     return av_gettime() / 1000000.0f;
-}
-
 int main(int argc, char *argv[])
 {
      if(argc != 2)
@@ -171,7 +166,8 @@ int main(int argc, char *argv[])
      }
 
      SDL_PauseAudio(0);
-     double start_time = get_clock();
+
+     int64_t start_time = av_gettime();
 
      SDL_Event event;
      double w_clock;
@@ -181,7 +177,7 @@ int main(int argc, char *argv[])
           if(sa_ctx->video_eof)
                goto SKIP_VIDEO;
 
-          while(vp == NULL || vp->pts <= get_clock() - start_time)
+          while(vp == NULL || vp->pts <= (double)(av_gettime() - start_time) / (double)1000000.0f)
           {
                if(vp != NULL)
                     SA_free_vp(vp);
@@ -194,11 +190,11 @@ int main(int argc, char *argv[])
                }
           }
           
-          w_clock = vp->pts - (get_clock() - start_time);
+          w_clock = vp->pts - (double)(av_gettime() - start_time) / (double)1000000.0f;
           while (w_clock >= 0.0)
           {
                usleep(w_clock * 1000 + 1);
-               w_clock = vp->pts - (get_clock() - start_time);
+               w_clock = vp->pts - (double)(av_gettime() - start_time) / (double)1000000.0f;
           }
           
 #ifndef SAPLAYER_OLD_USE_SDL_SURFACE
@@ -237,8 +233,8 @@ int main(int argc, char *argv[])
                          goto IGNORE_KEY;
                     }
 
-                    SA_seek(sa_ctx, get_clock() - start_time + delta, delta);
-                    
+                    SA_seek(sa_ctx, (double)(av_gettime() - start_time) / (double)1000000.0f + delta, delta);
+
                     // FIXME: should call this only when EOF encountered?
                     SDL_PauseAudio(0);
 
@@ -262,7 +258,7 @@ int main(int argc, char *argv[])
                     SDL_Flip(screen);
 #endif
                     
-                    start_time = get_clock() - vp->pts;
+                    start_time = av_gettime() - (int64_t)((vp->pts) * 1000000);
 
                IGNORE_KEY:;
                }
