@@ -6,6 +6,11 @@
  * To Public License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/wtfpl/COPYING for more details.
  */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "SAMutex.h"
 #include "SAQueue.h"
 
@@ -533,3 +538,7 @@ double SA_get_duration(SAContext *sa_ctx)
 {
      return (double)(sa_ctx->avfmt_ctx_ptr->duration) / (double)(AV_TIME_BASE);
 }
+
+#ifdef __cplusplus
+}
+#endif

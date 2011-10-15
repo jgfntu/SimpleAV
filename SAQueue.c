@@ -6,6 +6,11 @@
  * To Public License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/wtfpl/COPYING for more details.
  */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "SAQueue.h"
 
 #include <stdlib.h>
@@ -55,3 +60,7 @@ void *SAQ_pop(SAQContext *saq_ptr)
      free(head_ptr);
      return data;
 }
+
+#ifdef __cplusplus
+}
+#endif

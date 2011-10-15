@@ -6,6 +6,11 @@
  * To Public License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/wtfpl/COPYING for more details.
  */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "SAMutex.h"
 
 /*
@@ -69,3 +74,7 @@ int SAMutex_destroy(SAMutex *mutex)
 #endif
      return -1;
 }
+
+#ifdef __cplusplus
+}
+#endif

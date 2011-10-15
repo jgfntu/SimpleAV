@@ -6,6 +6,11 @@
  * To Public License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/wtfpl/COPYING for more details.
  */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef __SIMPLEAV_H__DEFINED__
 #define __SIMPLEAV_H__DEFINED__
 
@@ -84,4 +89,8 @@ int SA_get_height(SAContext *);
 
 double SA_get_duration(SAContext *);
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif

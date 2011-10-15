@@ -6,6 +6,11 @@
  * To Public License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/wtfpl/COPYING for more details.
  */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef __SIMPLEAV_SAMUTEX_H__DEFINED__
 #define __SIMPLEAV_SAMUTEX_H__DEFINED__
 
@@ -36,4 +41,8 @@ int SAMutex_lock(SAMutex *);
 int SAMutex_unlock(SAMutex *);
 int SAMutex_destroy(SAMutex *);
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
