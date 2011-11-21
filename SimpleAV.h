@@ -67,6 +67,8 @@ SAContext *SA_open(char *);
 
 void SA_close(SAContext *);
 
+void SA_dump_info(SAContext *);
+
 SAAudioPacket *SA_get_ap(SAContext *);
 
 SAVideoPacket *SA_get_vp(SAContext *);

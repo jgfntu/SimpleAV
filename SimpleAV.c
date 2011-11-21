@@ -65,7 +65,8 @@ SAContext *SA_open(char *filename)
           goto OPEN_FAIL;
 
      /* FIXME: do this for debugging. */
-     av_dump_format(avfmt_ctx_ptr, 0, filename, 0);
+     // av_dump_format(avfmt_ctx_ptr, 0, filename, 0);
+     
      /* getting the video stream */
      for(i = 0; i < avfmt_ctx_ptr->nb_streams; i++)
           if(avfmt_ctx_ptr->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
@@ -233,6 +234,12 @@ void SA_close(SAContext *sa_ctx)
           av_free(sa_ctx->frame);
      
      free(sa_ctx);
+     return;
+}
+
+void SA_dump_info(SAContext *sa_ctx)
+{
+     av_dump_format(sa_ctx->avfmt_ctx_ptr, 0, sa_ctx->filename, 0);
      return;
 }
 
