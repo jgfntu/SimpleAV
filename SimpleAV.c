@@ -11,9 +11,6 @@
 extern "C" {
 #endif
 
-#include "SAMutex.h"
-#include "SAQueue.h"
-
 #include "SimpleAV.h"
 
 #include <libavcodec/avcodec.h>

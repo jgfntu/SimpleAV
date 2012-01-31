@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#include "SAMutex.h"
+#include "SimpleAV.h"
 
 /*
  * A simple cross-platform(sorry, *BSD...) mutex.

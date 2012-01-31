@@ -6,13 +6,13 @@ all: libSimpleAV.a saplayer-old
 libSimpleAV.a: SAMutex.o SAQueue.o SimpleAV.o
 	ar cr libSimpleAV.a SAMutex.o SAQueue.o SimpleAV.o
 
-SAMutex.o: SAMutex.h SAMutex.c
+SAMutex.o: SimpleAV.h SAMutex.c
 	gcc $(CFLAGS) -c SAMutex.c
 
-SAQueue.o: SAQueue.h SAQueue.c
+SAQueue.o: SimpleAV.h SAQueue.c
 	gcc $(CFLAGS) -c SAQueue.c
 
-SimpleAV.o: SimpleAV.c SimpleAV.h SAMutex.h SAQueue.h
+SimpleAV.o: SimpleAV.c SimpleAV.h
 	gcc $(CFLAGS) -c SimpleAV.c
 
 saplayer-old: saplayer-old.o libSimpleAV.a

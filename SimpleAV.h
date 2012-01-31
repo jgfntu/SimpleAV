@@ -14,8 +14,39 @@ extern "C" {
 #ifndef __SIMPLEAV_H__DEFINED__
 #define __SIMPLEAV_H__DEFINED__
 
-#include "SAMutex.h"
-#include "SAQueue.h"
+// ***** SAMutex and SAQueue starts *****
+
+#if defined(__unix__)
+     #include <pthread.h>
+     #define SAMutex pthread_mutex_t
+#elif defined(_WIN32)
+     #include <windows.h>
+     #include <process.h>
+     #define SAMutex HANDLE
+#endif
+
+int SAMutex_init(SAMutex *);
+int SAMutex_lock(SAMutex *);
+int SAMutex_unlock(SAMutex *);
+int SAMutex_destroy(SAMutex *);
+
+typedef struct _SAQNode {
+     void *data;
+     struct _SAQNode *next;
+} _SAQNode;
+
+typedef struct SAQContext {
+     _SAQNode *head, *tail;
+     int nb;
+} SAQContext;
+
+SAQContext *SAQ_init(void);
+
+int SAQ_push(SAQContext *, void *);
+
+void *SAQ_pop(SAQContext *);
+
+// ***** SAMutex and SAQueue ends *****
 
 #include <SDL/SDL.h>
 #include <libavcodec/avcodec.h>
