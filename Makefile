@@ -3,10 +3,10 @@ LIBS=`pkg-config --libs libavcodec libavformat libavutil libswscale sdl`
 
 BUILD_DIR=build
 
-all: libSimpleAV.a saplayer-old
+all: saplayer-old libSimpleAV.so
 
-libSimpleAV.a: $(BUILD_DIR)/SAMutex.o $(BUILD_DIR)/SAQueue.o $(BUILD_DIR)/SimpleAV.o
-	ar cr libSimpleAV.a $(BUILD_DIR)/SAMutex.o $(BUILD_DIR)/SAQueue.o $(BUILD_DIR)/SimpleAV.o
+libSimpleAV.so: $(BUILD_DIR)/SAMutex.o $(BUILD_DIR)/SAQueue.o $(BUILD_DIR)/SimpleAV.o
+	gcc -shared -o libSimpleAV.so $(BUILD_DIR)/SAMutex.o $(BUILD_DIR)/SAQueue.o $(BUILD_DIR)/SimpleAV.o
 
 $(BUILD_DIR)/SAMutex.o: SimpleAV.h SAMutex.c
 	gcc $(CFLAGS) -fPIC -c SAMutex.c -o $(BUILD_DIR)/SAMutex.o
@@ -17,8 +17,8 @@ $(BUILD_DIR)/SAQueue.o: SimpleAV.h SAQueue.c
 $(BUILD_DIR)/SimpleAV.o: SimpleAV.c SimpleAV.h
 	gcc $(CFLAGS) -fPIC -c SimpleAV.c -o $(BUILD_DIR)/SimpleAV.o
 
-saplayer-old: $(BUILD_DIR)/saplayer-old.o libSimpleAV.a
-	gcc $(LIBS) -o saplayer-old $(BUILD_DIR)/saplayer-old.o libSimpleAV.a
+saplayer-old: $(BUILD_DIR)/saplayer-old.o libSimpleAV.so
+	gcc $(LIBS) -o saplayer-old $(BUILD_DIR)/saplayer-old.o -L. -lSimpleAV
 
 $(BUILD_DIR)/saplayer-old.o: SimpleAV.h saplayer-old.c
 	gcc $(CFLAGS) -c saplayer-old.c -o $(BUILD_DIR)/saplayer-old.o
@@ -27,14 +27,16 @@ $(BUILD_DIR)/saplayer-old.o: SimpleAV.h saplayer-old.c
 
 install:
 	mkdir -p /usr/local/lib /usr/local/include /usr/local/bin
-	cp libSimpleAV.a /usr/local/lib
+	cp libSimpleAV.so /usr/local/lib
 	cp SimpleAV.h /usr/local/include
 	cp saplayer-old /usr/local/bin
+	ldconfig
 
 uninstall:
-	rm /usr/local/lib/libSimpleAV.a
+	rm /usr/local/lib/libSimpleAV.so
 	rm /usr/local/include/SimpleAV.h
 	rm /usr/local/bin/saplayer-old
+	ldonfig
 
 clean:
 	rm $(BUILD_DIR)/*

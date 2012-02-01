@@ -1,4 +1,5 @@
 *.o
 *~
 saplayer-old
-libSimpleAV.a
+*.a
+*.so
