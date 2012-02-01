@@ -34,7 +34,7 @@ install:
 uninstall:
 	rm /usr/local/lib/libSimpleAV.so
 	rm /usr/local/include/SimpleAV.h
-	ldonfig
+	ldconfig
 
 clean:
 	rm $(BUILD_DIR)/*
