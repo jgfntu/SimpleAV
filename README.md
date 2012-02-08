@@ -11,25 +11,23 @@ The next version may features:
 Start with "saplayer-old.c" if you are interested. :-P
 
 --------------------------------------------------------------------------------
-### COMPILATION:
+### COMPILATION & (UN)INSTALL:
 
     $ make
     $ sudo make install
 
+    $ sudo make uninstall
+
 --------------------------------------------------------------------------------
 ### USING SIMPLEAV:
 
-Currently SimpleAV will always be installed to /usr/local/ as shared libs, so you don't need to do anything special when calling gcc.
+SimpleAV is distributed with a small pkg-config script to help you with compiling.
 
-But as SimpleAV returns decoded frames as AVFrame-s, you would have to link your program to libav/ffmpeg.
-
-SimpleAV is distributed with a small pkg-config script to help you with that.
-
-Here's an example:
+Here's an example on using it:
 
     $ gcc -o your_program your_code.c `pkg-config --cflags --libs SimpleAV`
 
-Notice that the pkg-config command is infact equal to "pkg-config --cflags --libs libavcodec libavformat libavutil libswscale".
+Notice that SimpleAV will always return decoded frames as AVFrame stuctures, so you would have to know how to convert a AVFrame to data format you need.
 
 --------------------------------------------------------------------------------
 ### ABOUT SAPLAYER-OLD:
