@@ -8,6 +8,7 @@
  */
 
 #include "SimpleAV.h"
+#include <SDL/SDL.h>
 
 #include <libswscale/swscale.h>
 #include <stdio.h>

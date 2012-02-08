@@ -1,0 +1,14 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: SimpleAV
+Description: SimpleAV, a simple video decoding library based on libav.
+Version: 0.1.0
+Requires: libavcodec libavformat libavutil libswscale
+Requires.private:
+Conflicts:
+Libs: -L${libdir} -lSimpleAV
+Libs.private:
+Cflags:

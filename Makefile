@@ -26,14 +26,16 @@ $(BUILD_DIR)/saplayer-old.o: SimpleAV.h saplayer-old.c
 ### install & uninstall & clean up
 
 install:
-	mkdir -p /usr/local/lib /usr/local/include
+	mkdir -p /usr/local/lib /usr/local/include /usr/local/lib/pkgconfig
 	cp libSimpleAV.so /usr/local/lib
 	cp SimpleAV.h /usr/local/include
+	cp SimpleAV.pc /usr/local/lib/pkgconfig
 	ldconfig
 
 uninstall:
 	rm /usr/local/lib/libSimpleAV.so
 	rm /usr/local/include/SimpleAV.h
+	rm /usr/local/lib/pkgconfig/SimpleAV.pc
 	ldconfig
 
 clean:

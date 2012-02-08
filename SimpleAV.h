@@ -48,7 +48,6 @@ void *SAQ_pop(SAQContext *);
 
 // ***** SAMutex and SAQueue ends *****
 
-#include <SDL/SDL.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
