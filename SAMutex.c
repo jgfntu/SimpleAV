@@ -30,7 +30,7 @@ int SAMutex_init(SAMutex *mutex)
 {
      if(mutex == NULL)
           return -1;
-#if defined(__unix__)
+#if defined(__unix__) || defined(__MACH__)
      return pthread_mutex_init(mutex, NULL) == 0 ? 0 : -1;
 #elif defined(_WIN32)
      *mutex = CreateMutex(0, FALSE, 0);
@@ -43,7 +43,7 @@ int SAMutex_lock(SAMutex *mutex)
 {
      if(mutex == NULL)
           return -1;
-#if defined(__unix__)
+#if defined(__unix__) || defined(__MACH__)
      return pthread_mutex_lock(mutex) == 0 ? 0 : -1;
 #elif defined(_WIN32)
      return WaitForSingleObject(*mutex, INFINITE) == WAIT_FAILED ? -1 : 0;
@@ -55,7 +55,7 @@ int SAMutex_unlock(SAMutex *mutex)
 {
      if(mutex == NULL)
           return -1;
-#if defined(__unix__)
+#if defined(__unix__) || defined(__MACH__)
      return pthread_mutex_unlock(mutex) == 0 ? 0 : -1;
 #elif defined(_WIN32)
      return ReleaseMutex(*mutex) != 0 ? 0 : -1;
@@ -67,7 +67,7 @@ int SAMutex_destroy(SAMutex *mutex)
 {
      if(mutex == NULL)
           return -1;
-#if defined(__unix__)
+#if defined(__unix__) || defined(__MACH__)
      return pthread_mutex_destroy(mutex) == 0 ? 0 : -1;
 #elif defined(_WIN32)
      return CloseHandle(mutex) != 0 ? 0 : -1;

@@ -3,3 +3,11 @@
 saplayer-old
 *.a
 *.so
+# *CMakeCache.txt
+# *CMakeFiles
+# *MakeFile
+build
+cmake/CmakeCache.txt
+cmake/CMakeFiles
+cmake/Makefile
+cmake/cmake_install.cmake

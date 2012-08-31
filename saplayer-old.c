@@ -8,7 +8,11 @@
  */
 
 #include "SimpleAV.h"
-#include <SDL/SDL.h>
+
+// FIXME: Maybe more work need to be done to make it run under Linux.
+// #include <SDL/SDL.h>
+#include <SDL.h>
+#include <SDL_main.h>
 
 #include <libswscale/swscale.h>
 #include <stdio.h>
