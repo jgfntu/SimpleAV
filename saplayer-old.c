@@ -239,7 +239,9 @@ int main(int argc, char *argv[])
                          goto IGNORE_KEY;
                     }
 
-                    SA_seek(sa_ctx, (double)(av_gettime() - start_time) / (double)1000000.0f + delta, delta);
+                    // SA_seek(sa_ctx, (double)(av_gettime() - start_time) / (double)1000000.0f + delta, delta);
+                    double cur_time = (double)(av_gettime() - start_time) / (double)1000000.0f;
+                    SA_seek(sa_ctx, cur_time + delta);
 
                     // FIXME: should call this only when EOF encountered?
                     SDL_PauseAudio(0);

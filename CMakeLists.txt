@@ -2,7 +2,7 @@ PROJECT(SimpleAV)
 
 set(SimpleAV_MAJOR 0)
 set(SimpleAV_MINOR 1)
-set(SimpleAV_PATCH 1)
+set(SimpleAV_PATCH 2)
 
 set(SimpleAV_VERSION ${SimpleAV_MAJOR}.${SimpleAV_MINOR}.${SimpleAV_PATCH})
 set(SimpleAV_DESCRIPTION "SimpleAV is a simple decoding library.")

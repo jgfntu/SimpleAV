@@ -23,6 +23,12 @@ extern "C" {
 #define  TRUE     1
 #define  FALSE    0
 
+// private helper methods
+static int _SA_read_packet(SAContext *sa_ctx);
+static int _SA_get_buffer(AVCodecContext *c, AVFrame *pic);
+static void _SA_release_buffer(AVCodecContext *c, AVFrame *pic);
+
+
 int SA_init(void)
 {
      // av_log_set_flags(???); // FIXME: inplement this
@@ -240,7 +246,7 @@ void SA_dump_info(SAContext *sa_ctx)
      return;
 }
 
-int _SA_read_packet(SAContext *sa_ctx)
+static int _SA_read_packet(SAContext *sa_ctx)
 {
      SAMutex_lock(sa_ctx->packet_lock);
      
@@ -322,13 +328,24 @@ SAVideoPacket *SA_get_vp(SAContext *sa_ctx)
      ret->frame_ptr = v_frame;
 
      uint64_t t_pts;
-     if(last_dts != AV_NOPTS_VALUE)
+     if(last_dts != AV_NOPTS_VALUE) {
+          // dranger: "The first way we talked about was getting the DTS
+          //           of the last packet processed"
           t_pts = last_dts;
-     else if(v_frame->opaque != NULL &&
-             *(uint64_t *)(v_frame->opaque) != AV_NOPTS_VALUE)
+     } else if(v_frame->opaque != NULL &&
+             *(uint64_t *)(v_frame->opaque) != AV_NOPTS_VALUE) {
+          // dranger: "if the packet's DTS doesn't help us,
+          //           we need to use the PTS of the first packet
+          //           that was decoded for the frame"
           t_pts = *(uint64_t *)(v_frame->opaque);
-     else
+     } else {
+          // dranger: "We set the PTS to 0 if we can't figure out what it is."a
+          // 
+          // But why? We have the video clock.
+          // However, when seeking, we will set the video clock to the time requested;
+          // so it may cause problems -- but really?
           t_pts = 0;
+     }
                
      if(t_pts != 0)
           ret->pts = t_pts * av_q2d(sa_ctx->video_st->time_base);
@@ -467,19 +484,28 @@ void SA_free_vp(SAVideoPacket *vp)
      free(vp);
 }
 
-int SA_seek(SAContext *sa_ctx, double seek_to, double delta)
+int SA_seek(SAContext *sa_ctx, double seek_to)
 {
      int ret = 0;
      SAMutex_lock(sa_ctx->aq_lock);
      SAMutex_lock(sa_ctx->apq_lock);
      SAMutex_lock(sa_ctx->vpq_lock);
+
+     if (seek_to < 0.0f) {
+          seek_to = 0.0f;
+     }
      
      int64_t pos = seek_to * AV_TIME_BASE;
-     int seek_flags = delta < 0 ? AVSEEK_FLAG_BACKWARD : 0;
      int stream_index = sa_ctx->v_stream;
      int64_t seek_target = av_rescale_q(pos, AV_TIME_BASE_Q,
                                         sa_ctx->video_st->time_base);
-     if(av_seek_frame(sa_ctx->avfmt_ctx_ptr, stream_index, seek_target, seek_flags) < 0)
+
+     // AVSEEK_FLAG_BACKWARD means libav will seek to the key frame closest to the requested
+     // time point and before it. It's not necessary when you want to seek backward.
+     //
+     // This could be used for accurate seeking; e.g., seek to the frame, and wait until
+     // the frame we want is out.
+     if(av_seek_frame(sa_ctx->avfmt_ctx_ptr, stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0)
      {
           // FIXME: failed? EOF?
           // fprintf(stderr, "Seeking failed!\n");
@@ -500,7 +526,16 @@ int SA_seek(SAContext *sa_ctx, double seek_to, double delta)
           avcodec_flush_buffers(sa_ctx->a_codec_ctx);
           avcodec_flush_buffers(sa_ctx->v_codec_ctx);
 
+          // video_clock will only be used for guessing the PTS
+          // when we cannot figure out what it is in the regular(sane) way;
+          // It will be set to the correct value once, so it's okay to set it to seek_to. 
           sa_ctx->video_clock = seek_to;
+
+          // and a_clock is even more useless...
+          // it will be used when PTS of the audio section we get is negative.
+          //
+          // negative? seriously? technically that should be impossible.
+          // FIXME: remove a_clock or give proof on the PTS may be negative.
           sa_ctx->a_clock = seek_to;
      }
 
@@ -511,7 +546,7 @@ int SA_seek(SAContext *sa_ctx, double seek_to, double delta)
      return ret;
 }
 
-int _SA_get_buffer(struct AVCodecContext *c, AVFrame *pic)
+static int _SA_get_buffer(struct AVCodecContext *c, AVFrame *pic)
 {
      int ret = avcodec_default_get_buffer(c, pic);
      uint64_t *pts = av_malloc(sizeof(uint64_t));
@@ -520,7 +555,7 @@ int _SA_get_buffer(struct AVCodecContext *c, AVFrame *pic)
      return ret;
 }
 
-void _SA_release_buffer(struct AVCodecContext *c, AVFrame *pic)
+static void _SA_release_buffer(struct AVCodecContext *c, AVFrame *pic)
 {
      if(pic)
           av_freep(&pic->opaque);

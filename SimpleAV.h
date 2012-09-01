@@ -65,6 +65,7 @@ typedef struct SAAudioPacket {
      double pts;
 } SAAudioPacket;
 
+// FIXME: hide this. it should be a blackbox to the client.
 typedef struct SAContext {
      char *filename;
 
@@ -88,38 +89,47 @@ typedef struct SAContext {
      
      int v_width, v_height;
      int audio_eof, video_eof;
+
+     // used for guessing PTS only; explained better in the source code of SA_seek.
+     // (in short they are almost useless)
      double video_clock, a_clock;
 } SAContext;
 
+// Initialize libav. return 0 on success.
+// FIXME: make it void?
 int SA_init(void);
 
-SAContext *SA_open(char *);
+SAContext *SA_open(char *filename);
 
-void SA_close(SAContext *);
+void SA_close(SAContext *sa_ctx);
 
-void SA_dump_info(SAContext *);
+void SA_dump_info(SAContext *sa_ctx);
 
-SAAudioPacket *SA_get_ap(SAContext *);
+SAAudioPacket *SA_get_ap(SAContext *sa_ctx);
 
-SAVideoPacket *SA_get_vp(SAContext *);
+SAVideoPacket *SA_get_vp(SAContext *sa_ctx);
 
-void SA_free_ap(SAAudioPacket *);
+void SA_free_ap(SAAudioPacket *ap);
 
-void SA_free_vp(SAVideoPacket *);
+void SA_free_vp(SAVideoPacket *vp);
 
-int SA_seek(SAContext *, double, double);
+// seek video to the last key frame before the requested second.
+// return 0 on success; else return -1.
+// 
+// will seek to the beginning if seek_to is negative.
+// FIXME: it will not do anything special if requested time is
+//        after end of the video. (you could say it's a feature too)
+// 
+// obviously the seeking is not accurate; you could use SA_get_[av]p to
+// implement accurate seeking -- keep asking for new ap/vp until the frame
+// you want is out.
+int SA_seek(SAContext *sa_ctx, double seek_to);
 
-int _SA_read_packet(SAContext *);
+int SA_get_width(SAContext *sa_ctx);
 
-int _SA_get_buffer(AVCodecContext *, AVFrame *);
+int SA_get_height(SAContext *sa_ctx);
 
-void _SA_release_buffer(AVCodecContext *, AVFrame *);
-
-int SA_get_width(SAContext *);
-
-int SA_get_height(SAContext *);
-
-double SA_get_duration(SAContext *);
+double SA_get_duration(SAContext *sa_ctx);
 
 #endif
 

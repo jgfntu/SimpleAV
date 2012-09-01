@@ -1,12 +1,11 @@
 SimpleAV aims on simplifing your job on decoding videos.
 It's released under WTFPL v2.
 
-Current version is 0.1.1, tested with libav v0.7.6 under Mac OS 10.7.
+Current version is 0.1.2, tested with libav v0.7.6 under Mac OS 10.7.
 SimpleAV was created under Linux; so I will make sure it works under Linux later.
 
 The next minor version may features:
 
-- precise seeking
 - correct down-mixing
 
 Start with "saplayer-old.c" if you are interested. :-P
